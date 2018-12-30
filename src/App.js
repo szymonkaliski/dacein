@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from "react";
 import lodash, { get } from "lodash";
-import Immutable, { Map } from "immutable";
+import Immutable, { Map, List } from "immutable";
 
 // expose to sketch once it's eval()-ed
 window.Immutable = Immutable;
@@ -65,8 +65,13 @@ const PLAYING = "PLAYING";
 const PAUSED = "PAUSED";
 
 const Sketch = ({ sketch }) => {
-  const [state, updateState] = useState(sketch.initialState || Map());
+  const [[history, historyIdx], updateHistory] = useState([
+    List([sketch.initialState || Map()]),
+    0
+  ]);
+
   const [playState, updatePlayState] = useState(PLAYING);
+
   const canvasRef = useRef(null);
   const [width, height] = get(sketch, ["setup", "canvas"], [800, 600]);
 
@@ -81,12 +86,7 @@ const Sketch = ({ sketch }) => {
     const globals = { width, height };
 
     const step = () => {
-      if (playState === PAUSED) {
-        frameId = requestAnimationFrame(step);
-        return;
-      }
-
-      const newState = sketch.update(state);
+      const newState = sketch.update(history.get(historyIdx));
 
       for (const operation of sketch.draw(newState)) {
         const [command, args] = operation;
@@ -96,9 +96,13 @@ const Sketch = ({ sketch }) => {
         }
       }
 
-      updateState(newState, () => {
+      if (playState === PLAYING) {
+        updateHistory([history.push(newState), historyIdx + 1], () => {
+          frameId = requestAnimationFrame(step);
+        });
+      } else {
         frameId = requestAnimationFrame(step);
-      });
+      }
     };
 
     frameId = requestAnimationFrame(step);
@@ -113,12 +117,53 @@ const Sketch = ({ sketch }) => {
   return (
     <div>
       <div className="mb2">
-        <button className="f7 mr2" onClick={() => updatePlayState(PAUSED)}>
+        <button
+          className="f7 mr2"
+          onClick={() => {
+            updatePlayState(PAUSED);
+          }}
+        >
           pause
         </button>
 
-        <button className="f7" onClick={() => updatePlayState(PLAYING)}>
+        <button
+          className="f7 mr2"
+          onClick={() => {
+            updateHistory([history.slice(0, historyIdx + 1), historyIdx]);
+            updatePlayState(PLAYING);
+          }}
+        >
           play
+        </button>
+
+        <span className="f7 mr2 dib tc" style={{ width: 100 }}>
+          {historyIdx} / {history.size - 1}
+        </span>
+
+        <button
+          className="f7 mr2"
+          onClick={() => updateHistory([history, Math.max(historyIdx - 1, 0)])}
+        >
+          {"<<"}
+        </button>
+
+        <input
+          className="mr2"
+          type="range"
+          min={0}
+          max={history.size - 1}
+          step={1}
+          value={historyIdx}
+          onChange={e => updateHistory([history, e.target.value])}
+        />
+
+        <button
+          className="f7 mr2"
+          onClick={() =>
+            updateHistory([history, Math.min(historyIdx + 1, history.size - 1)])
+          }
+        >
+          {">>"}
         </button>
       </div>
 
