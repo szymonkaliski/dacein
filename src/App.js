@@ -61,8 +61,12 @@ const COMMANDS = {
   }
 };
 
+const PLAYING = "PLAYING";
+const PAUSED = "PAUSED";
+
 const Sketch = ({ sketch }) => {
   const [state, updateState] = useState(sketch.initialState || Map());
+  const [playState, updatePlayState] = useState(PLAYING);
   const canvasRef = useRef(null);
   const [width, height] = get(sketch, ["setup", "canvas"], [800, 600]);
 
@@ -77,6 +81,11 @@ const Sketch = ({ sketch }) => {
     const globals = { width, height };
 
     const step = () => {
+      if (playState === PAUSED) {
+        frameId = requestAnimationFrame(step);
+        return;
+      }
+
       const newState = sketch.update(state);
 
       for (const operation of sketch.draw(newState)) {
@@ -103,6 +112,16 @@ const Sketch = ({ sketch }) => {
 
   return (
     <div>
+      <div className="mb2">
+        <button className="f7 mr2" onClick={() => updatePlayState(PAUSED)}>
+          pause
+        </button>
+
+        <button className="f7" onClick={() => updatePlayState(PLAYING)}>
+          play
+        </button>
+      </div>
+
       <canvas
         className="ba b--silver"
         width={width}
