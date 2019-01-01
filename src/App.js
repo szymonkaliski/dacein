@@ -6,6 +6,8 @@ import Immutable, { Map, List } from "immutable";
 window.Immutable = Immutable;
 window.lodash = lodash;
 
+const MAX_HISTORY_LEN = 1000;
+
 const sketch = {
   setup: {
     canvas: [800, 400]
@@ -18,19 +20,59 @@ const sketch = {
   },
 
   draw: state => {
+    const points = lodash
+      .range(300)
+      .map(i => [
+        Math.sin((state.get("c") + i * 0.2) * 0.1) * 330 + 400,
+        Math.cos((state.get("c") + i * 0.2) * 0.5) * 100 + 200
+      ]);
+
     return [
       ["background", { fill: "#eee" }],
-      ...lodash.range(40).map(i => {
-        return [
-          "circle",
-          {
-            x: Math.sin((state.get("c") + i) * 0.1) * 330 + 400,
-            y: Math.cos((state.get("c") + i) * 0.5) * 100 + 200,
-            r: 4,
-            fill: "#333"
-          }
-        ];
-      })
+      ["path", { points, stroke: "#333" }]
+
+      // ...lodash.range(40).map(i => {
+      //   return [
+      //     "rect",
+      //     {
+      //       pos: [
+      //         Math.sin((state.get("c") + i) * 0.1) * 330 + 400,
+      //         Math.cos((state.get("c") + i) * 0.5) * 100 + 200
+      //       ],
+      //       size: [40, 40],
+      //       fill: "#ddd",
+      //       stroke: "#333"
+      //     }
+      //   ];
+      // }),
+
+      // ...lodash.range(40).map(i => {
+      //   return [
+      //     "line",
+      //     {
+      //       a: [
+      //         Math.sin((state.get("c") + i) * 0.1) * 330 + 400,
+      //         Math.cos((state.get("c") + i) * 0.5) * 100 + 200
+      //       ],
+      //       b: [400, 200],
+      //       stroke: "#333"
+      //     }
+      //   ];
+      // }),
+
+      // ...lodash.range(40).map(i => {
+      //   return [
+      //     "ellipse",
+      //     {
+      //       pos: [
+      //         Math.sin((state.get("c") + i) * 0.1) * 330 + 400,
+      //         Math.cos((state.get("c") + i) * 0.5) * 100 + 200
+      //       ],
+      //       size: [4, 4],
+      //       fill: "#333"
+      //     }
+      //   ];
+      // })
     ];
   }
 };
@@ -41,7 +83,43 @@ const COMMANDS = {
     ctx.fillRect(0, 0, width, height);
   },
 
-  circle: (ctx, { x, y, r, fill, stroke }) => {
+  line: (ctx, { a, b, stroke }) => {
+    if (!stroke) {
+      return;
+    }
+
+    ctx.strokeStyle = stroke;
+
+    ctx.beginPath();
+    ctx.moveTo(a[0], a[1]);
+    ctx.lineTo(b[0], b[1]);
+    ctx.stroke();
+  },
+
+  path: (ctx, { points, stroke, fill }) => {
+    if (stroke) {
+      ctx.strokeStyle = stroke;
+    }
+    if (fill) {
+      ctx.fillStyle = fill;
+    }
+
+    ctx.beginPath();
+    ctx.moveTo(points[0][0], points[0][1]);
+    for (const point of points) {
+      ctx.lineTo(point[0], point[1]);
+    }
+    ctx.stroke();
+
+    if (fill) {
+      ctx.fill();
+    }
+    if (stroke) {
+      ctx.stroke();
+    }
+  },
+
+  ellipse: (ctx, { pos, size, fill, stroke }) => {
     if (fill) {
       ctx.fillStyle = fill;
     }
@@ -49,8 +127,33 @@ const COMMANDS = {
       ctx.strokeStyle = stroke;
     }
 
+    const [x, y] = pos;
+    const [w, h] = size;
+
     ctx.beginPath();
-    ctx.ellipse(x, y, r, r, 0, 0, Math.PI * 2);
+    ctx.ellipse(x, y, w, h, 0, 0, Math.PI * 2);
+
+    if (fill) {
+      ctx.fill();
+    }
+    if (stroke) {
+      ctx.stroke();
+    }
+  },
+
+  rect: (ctx, { pos, size, fill, stroke }) => {
+    if (fill) {
+      ctx.fillStyle = fill;
+    }
+    if (stroke) {
+      ctx.strokeStyle = stroke;
+    }
+
+    const [x, y] = pos;
+    const [w, h] = size;
+
+    ctx.beginPath();
+    ctx.rect(x, y, w, h);
 
     if (fill) {
       ctx.fill();
@@ -97,7 +200,15 @@ const Sketch = ({ sketch }) => {
       }
 
       if (playState === PLAYING) {
-        updateHistory([history.push(newState), historyIdx + 1], () => {
+        const newHistory = (history.size > MAX_HISTORY_LEN
+          ? history.skip(1)
+          : history
+        ).push(newState);
+
+        const newHistoryIdx =
+          history.size > MAX_HISTORY_LEN ? MAX_HISTORY_LEN : historyIdx + 1;
+
+        updateHistory([newHistory, newHistoryIdx], () => {
           frameId = requestAnimationFrame(step);
         });
       } else {
