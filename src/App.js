@@ -6,6 +6,9 @@ import AceEditor from "react-ace";
 import "brace/mode/javascript";
 import "brace/theme/github";
 
+import { COMMANDS } from "./lang";
+import { INSPECTORS } from "./inspector";
+
 // expose to sketch once it's eval()-ed
 window.Immutable = Immutable;
 window.lodash = lodash;
@@ -34,97 +37,25 @@ sketch({
 
     return [
       ["background", { fill: "#eee" }],
-      ...points.map(p => ["ellipse", { pos: p, size: [8, 8], fill: "#333" }])
+      ...points.map(p => ["rect", { pos: p, size: [8, 8], fill: "#333" }])
     ];
   }
 })
 `;
 
-const COMMANDS = {
-  background: (ctx, { fill }, { width, height }) => {
-    ctx.fillStyle = fill;
-    ctx.fillRect(0, 0, width, height);
-  },
+const Inspector = ({ sketch, state }) => {
+  return (
+    <div className="absolute" style={{ top: 0, left: 0 }}>
+      {sketch.draw(state).map(([command, args]) => {
+        if (!INSPECTORS[command]) {
+          console.warn(`No inspector for ${command}`);
+          return null;
+        }
 
-  line: (ctx, { a, b, stroke }) => {
-    if (!stroke) {
-      return;
-    }
-
-    ctx.strokeStyle = stroke;
-
-    ctx.beginPath();
-    ctx.moveTo(a[0], a[1]);
-    ctx.lineTo(b[0], b[1]);
-    ctx.stroke();
-  },
-
-  path: (ctx, { points, stroke, fill }) => {
-    if (stroke) {
-      ctx.strokeStyle = stroke;
-    }
-    if (fill) {
-      ctx.fillStyle = fill;
-    }
-
-    ctx.beginPath();
-    ctx.moveTo(points[0][0], points[0][1]);
-    for (const point of points) {
-      ctx.lineTo(point[0], point[1]);
-    }
-    ctx.stroke();
-
-    if (fill) {
-      ctx.fill();
-    }
-    if (stroke) {
-      ctx.stroke();
-    }
-  },
-
-  ellipse: (ctx, { pos, size, fill, stroke }) => {
-    if (fill) {
-      ctx.fillStyle = fill;
-    }
-    if (stroke) {
-      ctx.strokeStyle = stroke;
-    }
-
-    const [x, y] = pos;
-    const [w, h] = size;
-
-    ctx.beginPath();
-    ctx.ellipse(x, y, w, h, 0, 0, Math.PI * 2);
-
-    if (fill) {
-      ctx.fill();
-    }
-    if (stroke) {
-      ctx.stroke();
-    }
-  },
-
-  rect: (ctx, { pos, size, fill, stroke }) => {
-    if (fill) {
-      ctx.fillStyle = fill;
-    }
-    if (stroke) {
-      ctx.strokeStyle = stroke;
-    }
-
-    const [x, y] = pos;
-    const [w, h] = size;
-
-    ctx.beginPath();
-    ctx.rect(x, y, w, h);
-
-    if (fill) {
-      ctx.fill();
-    }
-    if (stroke) {
-      ctx.stroke();
-    }
-  }
+        return INSPECTORS[command](args);
+      })}{" "}
+    </div>
+  );
 };
 
 const Sketch = ({ sketch }) => {
@@ -133,7 +64,7 @@ const Sketch = ({ sketch }) => {
     0
   ]);
 
-  const [isPlaying, setIsPlaying] = useState(true);
+  const [isPlaying, setIsPlaying] = useState(false);
 
   const canvasRef = useRef(null);
   const [width, height] = get(sketch, ["setup", "canvas"], [800, 600]);
@@ -149,9 +80,7 @@ const Sketch = ({ sketch }) => {
     const globals = { width, height };
 
     const step = () => {
-      const newState = sketch.update(history.get(historyIdx));
-
-      for (const operation of sketch.draw(newState)) {
+      for (const operation of sketch.draw(history.get(historyIdx))) {
         const [command, args] = operation;
 
         if (COMMANDS[command]) {
@@ -160,6 +89,8 @@ const Sketch = ({ sketch }) => {
       }
 
       if (isPlaying) {
+        const newState = sketch.update(history.get(historyIdx));
+
         const newHistory = (history.size > MAX_HISTORY_LEN
           ? history.skip(1)
           : history
@@ -232,14 +163,13 @@ const Sketch = ({ sketch }) => {
         </button>
       </div>
 
-      <canvas
-        className="ba b--silver"
-        width={width}
-        height={height}
-        ref={canvasRef}
-      />
+      <div className="relative ba b--silver">
+        <canvas width={width} height={height} ref={canvasRef} />
 
-      {/* <pre className="code">{JSON.stringify(state, null, 2)}</pre> */}
+        {!isPlaying && (
+          <Inspector state={history.get(historyIdx)} sketch={sketch} />
+        )}
+      </div>
     </div>
   );
 };
