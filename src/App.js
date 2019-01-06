@@ -12,8 +12,7 @@ window.lodash = lodash;
 
 const MAX_HISTORY_LEN = 1000;
 
-const TEST_SKETCH = `
-const { Map } = Immutable;
+const TEST_SKETCH = `const { Map } = Immutable;
 const { range } = lodash;
 
 sketch({
@@ -28,14 +27,14 @@ sketch({
   },
 
   draw: state => {
-    const points = range(300).map(i => [
-      Math.sin((state.get("c") + i * 0.2) * 0.1) * 200 + 300,
-      Math.cos((state.get("c") + i * 0.2) * 0.3) * 200 + 300
+    const points = range(60).map(i => [
+      Math.sin((state.get("c") + i * 0.8) * 0.1) * 200 + 300,
+      Math.cos((state.get("c") + i * 0.8) * 0.3) * 200 + 300
     ]);
 
     return [
       ["background", { fill: "#eee" }],
-      ["path", { points, stroke: "#333" }]
+      ...points.map(p => ["ellipse", { pos: p, size: [8, 8], fill: "#333" }])
     ];
   }
 })
@@ -128,16 +127,13 @@ const COMMANDS = {
   }
 };
 
-const PLAYING = "PLAYING";
-const PAUSED = "PAUSED";
-
 const Sketch = ({ sketch }) => {
   const [[history, historyIdx], updateHistory] = useState([
     List([sketch.initialState || Map()]),
     0
   ]);
 
-  const [playState, updatePlayState] = useState(PLAYING);
+  const [isPlaying, setIsPlaying] = useState(true);
 
   const canvasRef = useRef(null);
   const [width, height] = get(sketch, ["setup", "canvas"], [800, 600]);
@@ -163,7 +159,7 @@ const Sketch = ({ sketch }) => {
         }
       }
 
-      if (playState === PLAYING) {
+      if (isPlaying) {
         const newHistory = (history.size > MAX_HISTORY_LEN
           ? history.skip(1)
           : history
@@ -195,20 +191,14 @@ const Sketch = ({ sketch }) => {
         <button
           className="f7 mr2"
           onClick={() => {
-            updatePlayState(PAUSED);
-          }}
-        >
-          pause
-        </button>
+            if (!isPlaying) {
+              updateHistory([history.slice(0, historyIdx + 1), historyIdx]);
+            }
 
-        <button
-          className="f7 mr2"
-          onClick={() => {
-            updateHistory([history.slice(0, historyIdx + 1), historyIdx]);
-            updatePlayState(PLAYING);
+            setIsPlaying(!isPlaying);
           }}
         >
-          play
+          {isPlaying ? "pause" : "play"}
         </button>
 
         <span className="f7 mr2 dib tc" style={{ width: 100 }}>
@@ -254,7 +244,7 @@ const Sketch = ({ sketch }) => {
   );
 };
 
-const Editor = ({ sketch, onChange }) => {
+const Editor = ({ sketch, onChange, evalError }) => {
   return (
     <AceEditor
       mode="javascript"
@@ -264,6 +254,18 @@ const Editor = ({ sketch, onChange }) => {
       showGutter={false}
       showPrintMargin={false}
       onChange={e => onChange(e)}
+      annotations={
+        evalError
+          ? [
+              {
+                column: evalError.column,
+                row: evalError.line,
+                type: "error",
+                text: evalError.msg
+              }
+            ]
+          : []
+      }
     />
   );
 };
@@ -271,6 +273,7 @@ const Editor = ({ sketch, onChange }) => {
 export default () => {
   const [code, setCode] = useState(TEST_SKETCH);
   const [sketch, setSketch] = useState(null);
+  const [evalError, setEvalError] = useState(null);
 
   useEffect(
     () => {
@@ -280,7 +283,11 @@ export default () => {
 
       try {
         eval(`const sketch = window.sketch; ${code}`);
-      } catch (e) {}
+      } catch (e) {
+        const { line, column } = e;
+
+        setEvalError({ msg: e.toString(), line, column });
+      }
 
       return () => delete window.sketch;
     },
@@ -292,7 +299,11 @@ export default () => {
       {sketch && <Sketch sketch={sketch} />}
 
       <div className="ml2 ba b--light-gray">
-        <Editor sketch={code} onChange={e => setCode(e)} />
+        <Editor
+          sketch={code}
+          onChange={e => setCode(e)}
+          evalError={evalError}
+        />
       </div>
     </div>
   );
