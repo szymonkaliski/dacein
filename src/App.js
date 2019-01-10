@@ -1,7 +1,9 @@
+import AceEditor from "react-ace";
+import Immutable, { Map, List } from "immutable";
 import React, { useEffect, useState, useRef } from "react";
 import lodash, { get } from "lodash";
-import Immutable, { Map, List } from "immutable";
-import AceEditor from "react-ace";
+import recast from "recast";
+import types from "ast-types";
 
 import "brace/mode/javascript";
 import "brace/theme/github";
@@ -37,7 +39,8 @@ sketch({
 
     return [
       ["background", { fill: "#eee" }],
-      ...points.map(p => ["rect", { pos: p, size: [8, 8], fill: "#333" }])
+      ["rect", { pos: [0, 0], size: [10, 10], fill: "black" }],
+      ...points.map(p => ["ellipse", { pos: p, size: [8, 8], fill: "#333" }])
     ];
   }
 })
@@ -46,14 +49,14 @@ sketch({
 const Inspector = ({ sketch, state }) => {
   return (
     <div className="absolute" style={{ top: 0, left: 0 }}>
-      {sketch.draw(state).map(([command, args]) => {
+      {sketch.draw(state).map(([command, args], i) => {
         if (!INSPECTORS[command]) {
           console.warn(`No inspector for ${command}`);
           return null;
         }
 
-        return INSPECTORS[command](args);
-      })}{" "}
+        return <div key={`${i}-${command}`}>{INSPECTORS[command](args)}</div>;
+      })}
     </div>
   );
 };
@@ -207,19 +210,56 @@ export default () => {
 
   useEffect(
     () => {
-      if (!window.sketch) {
-        window.sketch = sketch => setSketch(sketch);
-      }
+      const ast = recast.parse(code);
 
-      try {
-        eval(`const sketch = window.sketch; ${code}`);
-      } catch (e) {
-        const { line, column } = e;
+      console.log({ recast, types });
 
-        setEvalError({ msg: e.toString(), line, column });
-      }
+      types.visit(ast, {
+        visitExpressionStatement: function(path) {
+          console.log("HERE");
 
-      return () => delete window.sketch;
+          if (path.value.expression.callee.name === "sketch") {
+            this.traverse(path);
+          } else {
+            return false;
+          }
+        },
+
+        visitProperty: function(path) {
+          if (path.value.key.name === "draw") {
+            this.traverse(path);
+          } else {
+            return false;
+          }
+        },
+
+        visitReturnStatement: function(path) {
+          console.log("return", path.value.argument.elements);
+
+          // this.traverse(path);
+          return false;
+        }
+      });
+
+      // if (!window.sketch) {
+      //   window.sketch = sketch => {
+
+      //     // setSketch(sketch)
+      //   };
+      // }
+
+      // try {
+      //   const finalCode = `const sketch = window.sketch; ${code}`;
+      //   eval(finalCode);
+      // } catch (e) {
+      //   const { line, column } = e;
+
+      //   setEvalError({ msg: e.toString(), line, column });
+      // }
+
+      // return () => {
+      //   delete window.sketch;
+      // };
     },
     [code]
   );
