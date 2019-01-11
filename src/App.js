@@ -11,6 +11,77 @@ import "brace/theme/github";
 import { COMMANDS } from "./lang";
 import { INSPECTORS } from "./inspector";
 
+const Builders = recast.types.builders;
+
+const isCommand = key => COMMANDS[key] !== undefined;
+
+const addCodeMeta = code => {
+  const ast = recast.parse(code);
+
+  types.visit(ast, {
+    visitExpressionStatement: function(path) {
+      if (path.value.expression.callee.name === "sketch") {
+        this.traverse(path);
+      } else {
+        return false;
+      }
+    },
+
+    visitProperty: function(path) {
+      if (path.value.key.name === "draw") {
+        this.traverse(path);
+      } else {
+        return false;
+      }
+    },
+
+    visitReturnStatement: function(path) {
+      this.traverse(path);
+    },
+
+    visitArrayExpression: function(path) {
+      const elements = path.value.elements || [];
+      const maybeCommand = elements[0];
+
+      // TODO: traverse up to parent ArrayExpression
+      if (isCommand(get(maybeCommand, "value"))) {
+        if (elements[1].type === "ObjectExpression") {
+          return Builders.arrayExpression([
+            elements[0],
+            Builders.objectExpression([
+              ...elements[1].properties,
+              Builders.property(
+                "init",
+                Builders.identifier("__meta"),
+                Builders.objectExpression([
+                  Builders.property(
+                    "init",
+                    Builders.identifier("lineStart"),
+                    Builders.literal(maybeCommand.loc.start.line)
+                  ),
+                  Builders.property(
+                    "init",
+                    Builders.identifier("lineEnd"),
+                    Builders.literal(maybeCommand.loc.end.line)
+                  )
+                ])
+              )
+            ])
+          ]);
+        }
+
+        return false;
+      } else {
+        this.traverse(path);
+      }
+    }
+  });
+
+  const { code: finalCode } = recast.print(ast);
+
+  return finalCode;
+};
+
 // expose to sketch once it's eval()-ed
 window.Immutable = Immutable;
 window.lodash = lodash;
@@ -51,11 +122,20 @@ const Inspector = ({ sketch, state }) => {
     <div className="absolute" style={{ top: 0, left: 0 }}>
       {sketch.draw(state).map(([command, args], i) => {
         if (!INSPECTORS[command]) {
-          console.warn(`No inspector for ${command}`);
           return null;
         }
 
-        return <div key={`${i}-${command}`}>{INSPECTORS[command](args)}</div>;
+        return (
+          <div
+            key={`${i}-${command}`}
+            onMouseOver={() => {
+              // TODO: highlight in code editor
+              console.log(command, args);
+            }}
+          >
+            {INSPECTORS[command](args)}
+          </div>
+        );
       })}
     </div>
   );
@@ -184,7 +264,7 @@ const Editor = ({ sketch, onChange, evalError }) => {
       theme="github"
       value={sketch}
       width="800px"
-      showGutter={false}
+      showGutter={true}
       showPrintMargin={false}
       onChange={e => onChange(e)}
       annotations={
@@ -210,56 +290,27 @@ export default () => {
 
   useEffect(
     () => {
-      const ast = recast.parse(code);
+      if (!window.sketch) {
+        window.sketch = sketch => {
+          setSketch(sketch);
+        };
+      }
 
-      console.log({ recast, types });
+      const codeWithMeta = addCodeMeta(code);
 
-      types.visit(ast, {
-        visitExpressionStatement: function(path) {
-          console.log("HERE");
+      try {
+        eval(`
+          const sketch = window.sketch;
+          ${codeWithMeta}
+        `);
+      } catch (e) {
+        const { line, column } = e;
+        setEvalError({ msg: e.toString(), line, column });
+      }
 
-          if (path.value.expression.callee.name === "sketch") {
-            this.traverse(path);
-          } else {
-            return false;
-          }
-        },
-
-        visitProperty: function(path) {
-          if (path.value.key.name === "draw") {
-            this.traverse(path);
-          } else {
-            return false;
-          }
-        },
-
-        visitReturnStatement: function(path) {
-          console.log("return", path.value.argument.elements);
-
-          // this.traverse(path);
-          return false;
-        }
-      });
-
-      // if (!window.sketch) {
-      //   window.sketch = sketch => {
-
-      //     // setSketch(sketch)
-      //   };
-      // }
-
-      // try {
-      //   const finalCode = `const sketch = window.sketch; ${code}`;
-      //   eval(finalCode);
-      // } catch (e) {
-      //   const { line, column } = e;
-
-      //   setEvalError({ msg: e.toString(), line, column });
-      // }
-
-      // return () => {
-      //   delete window.sketch;
-      // };
+      return () => {
+        delete window.sketch;
+      };
     },
     [code]
   );
