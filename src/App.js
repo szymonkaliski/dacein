@@ -8,6 +8,8 @@ import types from "ast-types";
 import "brace/mode/javascript";
 import "brace/theme/github";
 
+import "./style.css";
+
 import { COMMANDS } from "./lang";
 import { INSPECTORS } from "./inspector";
 
@@ -117,7 +119,7 @@ sketch({
 })
 `;
 
-const Inspector = ({ sketch, state }) => {
+const Inspector = ({ sketch, state, onHover }) => {
   return (
     <div className="absolute" style={{ top: 0, left: 0 }}>
       {sketch.draw(state).map(([command, args], i) => {
@@ -128,10 +130,8 @@ const Inspector = ({ sketch, state }) => {
         return (
           <div
             key={`${i}-${command}`}
-            onMouseOver={() => {
-              // TODO: highlight in code editor
-              console.log(command, args);
-            }}
+            onMouseOver={() => onHover(args.__meta)}
+            onMouseOut={e => onHover()}
           >
             {INSPECTORS[command](args)}
           </div>
@@ -141,7 +141,7 @@ const Inspector = ({ sketch, state }) => {
   );
 };
 
-const Sketch = ({ sketch }) => {
+const Sketch = ({ sketch, setHighlightMarker }) => {
   const [[history, historyIdx], updateHistory] = useState([
     List([sketch.initialState || Map()]),
     0
@@ -250,14 +250,29 @@ const Sketch = ({ sketch }) => {
         <canvas width={width} height={height} ref={canvasRef} />
 
         {!isPlaying && (
-          <Inspector state={history.get(historyIdx)} sketch={sketch} />
+          <Inspector
+            state={history.get(historyIdx)}
+            sketch={sketch}
+            onHover={e =>
+              setHighlightMarker(
+                e
+                  ? {
+                      startRow: e.lineStart - 1,
+                      endRow: e.lineStart,
+                      className: "highlight-marker",
+                      type: "background"
+                    }
+                  : {}
+              )
+            }
+          />
         )}
       </div>
     </div>
   );
 };
 
-const Editor = ({ sketch, onChange, evalError }) => {
+const Editor = ({ sketch, highlightMarker, onChange, evalError }) => {
   return (
     <AceEditor
       mode="javascript"
@@ -267,6 +282,7 @@ const Editor = ({ sketch, onChange, evalError }) => {
       showGutter={true}
       showPrintMargin={false}
       onChange={e => onChange(e)}
+      markers={[highlightMarker]}
       annotations={
         evalError
           ? [
@@ -287,6 +303,7 @@ export default () => {
   const [code, setCode] = useState(TEST_SKETCH);
   const [sketch, setSketch] = useState(null);
   const [evalError, setEvalError] = useState(null);
+  const [highlightMarker, setHighlightMarker] = useState({});
 
   useEffect(
     () => {
@@ -317,13 +334,16 @@ export default () => {
 
   return (
     <div className="sans-serif pa2 flex">
-      {sketch && <Sketch sketch={sketch} />}
+      {sketch && (
+        <Sketch sketch={sketch} setHighlightMarker={setHighlightMarker} />
+      )}
 
       <div className="ml2 ba b--light-gray">
         <Editor
           sketch={code}
           onChange={e => setCode(e)}
           evalError={evalError}
+          highlightMarker={highlightMarker}
         />
       </div>
     </div>
