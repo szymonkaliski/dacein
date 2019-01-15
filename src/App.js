@@ -1,7 +1,7 @@
 import AceEditor from "react-ace";
-import Immutable, { Map, List } from "immutable";
+import immer, { setAutoFreeze } from "immer";
 import React, { useEffect, useState, useRef } from "react";
-import lodash, { get } from "lodash";
+import { get, debounce } from "lodash";
 import recast from "recast";
 import types from "ast-types";
 
@@ -12,6 +12,11 @@ import "./style.css";
 
 import { COMMANDS } from "./lang";
 import { INSPECTORS } from "./inspector";
+
+const COMPILE_DEBOUNCE_TIME = 500;
+const MAX_HISTORY_LEN = 1000;
+
+setAutoFreeze(false); // TODO: disable for prod only -> https://github.com/mweststrate/immer#auto-freezing
 
 const Builders = recast.types.builders;
 
@@ -84,30 +89,26 @@ const addCodeMeta = code => {
   return finalCode;
 };
 
-// expose to sketch once it's eval()-ed
-window.Immutable = Immutable;
-window.lodash = lodash;
-
-const MAX_HISTORY_LEN = 1000;
-
-const TEST_SKETCH = `const { Map } = Immutable;
-const { range } = lodash;
-
+const TEST_SKETCH = `
 sketch({
   setup: {
     canvas: [600, 600]
   },
 
-  initialState: Map({ c: 0 }),
+  initialState: {
+    c: 0
+  },
 
   update: state => {
-    return state.update("c", c => c + 0.1);
+    state.c += 1;
+
+    return state;
   },
 
   draw: state => {
-    const points = range(60).map(i => [
-      Math.sin((state.get("c") + i * 0.8) * 0.1) * 200 + 300,
-      Math.cos((state.get("c") + i * 0.8) * 0.3) * 200 + 300
+    const points = Array.from({ length: 60 }).map((_, i) => [
+      Math.sin((state.c + i * 0.8) * 0.1) * 200 + 300,
+      Math.cos((state.c + i * 0.8) * 0.3) * 200 + 300
     ]);
 
     return [
@@ -123,6 +124,10 @@ const Inspector = ({ sketch, state, onHover }) => {
   return (
     <div className="absolute" style={{ top: 0, left: 0 }}>
       {sketch.draw(state).map(([command, args], i) => {
+        if (!command || !args) {
+          return null;
+        }
+
         if (!INSPECTORS[command]) {
           return null;
         }
@@ -141,14 +146,18 @@ const Inspector = ({ sketch, state, onHover }) => {
   );
 };
 
+const useImmer = initialValue => {
+  const [val, updateValue] = useState(initialValue);
+  return [val, updater => updateValue(immer(updater))];
+};
+
 const Sketch = ({ sketch, setHighlightMarker }) => {
-  const [[history, historyIdx], updateHistory] = useState([
-    List([sketch.initialState || Map()]),
-    0
-  ]);
+  const [{ history, idx: historyIdx }, updateHistory] = useImmer({
+    history: [sketch.initialState || {}],
+    idx: 0
+  });
 
-  const [isPlaying, setIsPlaying] = useState(false);
-
+  const [isPlaying, setIsPlaying] = useState(true);
   const canvasRef = useRef(null);
   const [width, height] = get(sketch, ["setup", "canvas"], [800, 600]);
 
@@ -163,7 +172,7 @@ const Sketch = ({ sketch, setHighlightMarker }) => {
     const globals = { width, height };
 
     const step = () => {
-      for (const operation of sketch.draw(history.get(historyIdx))) {
+      for (const operation of sketch.draw(history[historyIdx])) {
         const [command, args] = operation;
 
         if (COMMANDS[command]) {
@@ -172,19 +181,22 @@ const Sketch = ({ sketch, setHighlightMarker }) => {
       }
 
       if (isPlaying) {
-        const newState = sketch.update(history.get(historyIdx));
+        updateHistory(
+          draft => {
+            const newState = sketch.update(draft.history[draft.idx]);
 
-        const newHistory = (history.size > MAX_HISTORY_LEN
-          ? history.skip(1)
-          : history
-        ).push(newState);
+            draft.history.push(newState);
 
-        const newHistoryIdx =
-          history.size > MAX_HISTORY_LEN ? MAX_HISTORY_LEN : historyIdx + 1;
+            while (draft.history.length > MAX_HISTORY_LEN) {
+              draft.history.pop();
+            }
 
-        updateHistory([newHistory, newHistoryIdx], () => {
-          frameId = requestAnimationFrame(step);
-        });
+            draft.idx = Math.min(MAX_HISTORY_LEN, draft.idx + 1);
+          },
+          () => {
+            frameId = requestAnimationFrame(step);
+          }
+        );
       } else {
         frameId = requestAnimationFrame(step);
       }
@@ -206,7 +218,9 @@ const Sketch = ({ sketch, setHighlightMarker }) => {
           className="f7 mr2"
           onClick={() => {
             if (!isPlaying) {
-              updateHistory([history.slice(0, historyIdx + 1), historyIdx]);
+              updateHistory(draft => {
+                draft.history = draft.history.slice(0, draft.idx + 1);
+              });
             }
 
             setIsPlaying(!isPlaying);
@@ -216,12 +230,16 @@ const Sketch = ({ sketch, setHighlightMarker }) => {
         </button>
 
         <span className="f7 mr2 dib tc" style={{ width: 100 }}>
-          {historyIdx} / {history.size - 1}
+          {historyIdx} / {history.length - 1}
         </span>
 
         <button
           className="f7 mr2"
-          onClick={() => updateHistory([history, Math.max(historyIdx - 1, 0)])}
+          onClick={() =>
+            updateHistory(draft => {
+              draft.idx = Math.max(draft.idx - 1, 0);
+            })
+          }
         >
           {"<<"}
         </button>
@@ -230,16 +248,24 @@ const Sketch = ({ sketch, setHighlightMarker }) => {
           className="mr2"
           type="range"
           min={0}
-          max={history.size - 1}
+          max={history.length - 1}
           step={1}
           value={historyIdx}
-          onChange={e => updateHistory([history, parseInt(e.target.value, 10)])}
+          onChange={e => {
+            const { value } = e.target;
+
+            updateHistory(draft => {
+              draft.idx = parseInt(value, 10);
+            });
+          }}
         />
 
         <button
           className="f7 mr2"
           onClick={() =>
-            updateHistory([history, Math.min(historyIdx + 1, history.size - 1)])
+            updateHistory(draft => {
+              draft.idx = Math.min(draft.idx + 1, draft.history.length - 1);
+            })
           }
         >
           {">>"}
@@ -251,7 +277,7 @@ const Sketch = ({ sketch, setHighlightMarker }) => {
 
         {!isPlaying && (
           <Inspector
-            state={history.get(historyIdx)}
+            state={history[historyIdx]}
             sketch={sketch}
             onHover={e =>
               setHighlightMarker(
@@ -306,18 +332,19 @@ export default () => {
   const [highlightMarker, setHighlightMarker] = useState({});
 
   useEffect(
-    () => {
+    debounce(() => {
       if (!window.sketch) {
         window.sketch = sketch => {
           setSketch(sketch);
         };
       }
 
-      const codeWithMeta = addCodeMeta(code);
-
       try {
+        const codeWithMeta = addCodeMeta(code);
+
         eval(`
           const sketch = window.sketch;
+
           ${codeWithMeta}
         `);
       } catch (e) {
@@ -328,7 +355,7 @@ export default () => {
       return () => {
         delete window.sketch;
       };
-    },
+    }, COMPILE_DEBOUNCE_TIME),
     [code]
   );
 
