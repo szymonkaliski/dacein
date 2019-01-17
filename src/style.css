@@ -1,4 +1,3 @@
-.highlight-marker {
-  position: absolute;
-  background: #eee;
+.CodeMirror {
+  height: auto !important;
 }

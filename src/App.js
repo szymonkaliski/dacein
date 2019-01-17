@@ -1,19 +1,19 @@
-import AceEditor from "react-ace";
+import CodeMirror from "react-codemirror";
 import immer, { setAutoFreeze } from "immer";
 import React, { useEffect, useState, useRef } from "react";
 import { get, debounce } from "lodash";
 import recast from "recast";
 import types from "ast-types";
 
-import "brace/mode/javascript";
-import "brace/theme/github";
-
 import "./style.css";
+
+import "codemirror/lib/codemirror.css";
+import "codemirror/mode/javascript/javascript";
 
 import { COMMANDS } from "./lang";
 import { INSPECTORS } from "./inspector";
 
-const COMPILE_DEBOUNCE_TIME = 500;
+const COMPILE_DEBOUNCE_TIME = 100;
 const MAX_HISTORY_LEN = 1000;
 
 setAutoFreeze(false); // TODO: disable for prod only -> https://github.com/mweststrate/immer#auto-freezing
@@ -306,30 +306,9 @@ const Sketch = ({ sketch, setHighlightMarker }) => {
   );
 };
 
-const Editor = ({ sketch, highlightMarker, onChange, evalError }) => {
+const Editor = ({ code, highlightMarker, onChange, evalError }) => {
   return (
-    <AceEditor
-      mode="javascript"
-      theme="github"
-      value={sketch}
-      width="800px"
-      showGutter={true}
-      showPrintMargin={false}
-      onChange={e => onChange(e)}
-      markers={[highlightMarker]}
-      annotations={
-        evalError
-          ? [
-              {
-                column: evalError.column,
-                row: evalError.line,
-                type: "error",
-                text: evalError.msg
-              }
-            ]
-          : []
-      }
-    />
+    <CodeMirror className="h-100" value={code} onChange={e => onChange(e)} />
   );
 };
 
@@ -387,7 +366,7 @@ export default () => {
 
       <div className="ml2 ba b--light-gray">
         <Editor
-          sketch={code}
+          code={code}
           onChange={e => setCode(e)}
           evalError={evalError}
           highlightMarker={highlightMarker}
