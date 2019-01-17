@@ -1,9 +1,9 @@
-import CodeMirror from "react-codemirror";
-import immer, { setAutoFreeze } from "immer";
+import { Controlled as CodeMirror } from "react-codemirror2";
 import React, { useEffect, useState, useRef } from "react";
-import { get, debounce } from "lodash";
+import immer, { setAutoFreeze } from "immer";
 import recast from "recast";
 import types from "ast-types";
+import { get, debounce } from "lodash";
 
 import "./style.css";
 
@@ -308,7 +308,19 @@ const Sketch = ({ sketch, setHighlightMarker }) => {
 
 const Editor = ({ code, highlightMarker, onChange, evalError }) => {
   return (
-    <CodeMirror className="h-100" value={code} onChange={e => onChange(e)} />
+    <CodeMirror
+      className="h-100"
+      value={code}
+      onChange={e => onChange(e)}
+      onCursor={e => {
+        const cursor = e.getCursor();
+        const token = e.getTokenAt(cursor);
+        const coords = e.cursorCoords();
+
+        // TODO: overlay slider!
+        console.log(token.type, token.string, coords);
+      }}
+    />
   );
 };
 
