@@ -162,6 +162,14 @@ const Sketch = ({ sketch, setHighlightMarker }) => {
   const [width, height] = get(sketch, ["setup", "canvas"], [800, 600]);
 
   useEffect(() => {
+    window.dumpHistory = () => history;
+
+    return () => {
+      delete window.dumpHistory();
+    };
+  });
+
+  useEffect(() => {
     if (!canvasRef.current) {
       return;
     }
@@ -187,7 +195,7 @@ const Sketch = ({ sketch, setHighlightMarker }) => {
 
             draft.history.push(newState);
 
-            while (draft.history.length > MAX_HISTORY_LEN) {
+            while (draft.history.length > MAX_HISTORY_LEN + 1) {
               draft.history.pop();
             }
 
@@ -335,7 +343,19 @@ export default () => {
     debounce(() => {
       if (!window.sketch) {
         window.sketch = sketch => {
-          setSketch(sketch);
+          let isExecuting = true;
+
+          try {
+            sketch.draw(sketch.update(sketch.initialState || {}));
+          } catch (e) {
+            isExecuting = false;
+            console.log("eval err", e.toString());
+            setEvalError({ msg: e.toString() });
+          }
+
+          if (isExecuting) {
+            setSketch(sketch);
+          }
         };
       }
 
