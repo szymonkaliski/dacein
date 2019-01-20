@@ -7,6 +7,7 @@ import { COMMANDS } from "./commands";
 import { Sketch } from "./sketch";
 import { Editor } from "./editor";
 
+import "tachyons";
 import "./style.css";
 
 const TEST_SKETCH = `
@@ -40,7 +41,7 @@ sketch({
 })
 `;
 
-const COMPILE_DEBOUNCE_TIME = 100;
+const COMPILE_DEBOUNCE_TIME = 16;
 const Builders = recast.types.builders;
 const isCommand = key => COMMANDS[key] !== undefined;
 
@@ -111,7 +112,7 @@ const addCodeMeta = code => {
   return finalCode;
 };
 
-export default () => {
+export const App = () => {
   const [code, setCode] = useState(TEST_SKETCH);
   const [sketch, setSketch] = useState(null);
   const [evalError, setEvalError] = useState(null);
@@ -153,6 +154,17 @@ export default () => {
         delete window.sketch;
       };
     }, COMPILE_DEBOUNCE_TIME),
+    [code]
+  );
+
+  useEffect(
+    () => {
+      window.dumpCode = () => console.log(code);
+
+      return () => {
+        delete window.dumpCode;
+      };
+    },
     [code]
   );
 

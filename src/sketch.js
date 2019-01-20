@@ -13,7 +13,7 @@ export const Sketch = ({ sketch, setHighlightMarker }) => {
     idx: 0
   });
 
-  const [isPlaying, setIsPlaying] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(true);
   const canvasRef = useRef(null);
   const [width, height] = get(sketch, ["setup", "canvas"], [800, 600]);
 
@@ -61,8 +61,6 @@ export const Sketch = ({ sketch, setHighlightMarker }) => {
             frameId = requestAnimationFrame(step);
           }
         );
-      } else {
-        frameId = requestAnimationFrame(step);
       }
     };
 

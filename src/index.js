@@ -1,8 +1,7 @@
 import React from "react";
 import ReactDOM from "react-dom";
-import App from "./App";
 
-import "tachyons";
+import { App } from "./app";
 
 const USE_CREATE_ROOT = true;
 
