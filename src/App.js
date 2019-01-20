@@ -1,25 +1,47 @@
-import { Controlled as CodeMirror } from "react-codemirror2";
-import React, { useEffect, useState, useRef } from "react";
-import immer, { setAutoFreeze } from "immer";
+import React, { useEffect, useState } from "react";
 import recast from "recast";
 import types from "ast-types";
 import { get, debounce } from "lodash";
 
+import { COMMANDS } from "./commands";
+import { Sketch } from "./sketch";
+import { Editor } from "./editor";
+
 import "./style.css";
 
-import "codemirror/lib/codemirror.css";
-import "codemirror/mode/javascript/javascript";
+const TEST_SKETCH = `
+sketch({
+  setup: {
+    canvas: [600, 600]
+  },
 
-import { COMMANDS } from "./lang";
-import { INSPECTORS } from "./inspector";
+  initialState: {
+    c: 0
+  },
+
+  update: state => {
+    state.c += 1;
+
+    return state;
+  },
+
+  draw: state => {
+    const points = Array.from({ length: 60 }).map((_, i) => [
+      Math.sin((state.c + i * 0.8) * 0.1) * 200 + 300,
+      Math.cos((state.c + i * 0.8) * 0.3) * 200 + 300
+    ]);
+
+    return [
+      ["background", { fill: "#eee" }],
+      ["rect", { pos: [0, 0], size: [10, 10], fill: "black" }],
+      ...points.map(p => ["ellipse", { pos: p, size: [8, 8], fill: "#333" }])
+    ];
+  }
+})
+`;
 
 const COMPILE_DEBOUNCE_TIME = 100;
-const MAX_HISTORY_LEN = 1000;
-
-setAutoFreeze(false); // TODO: disable for prod only -> https://github.com/mweststrate/immer#auto-freezing
-
 const Builders = recast.types.builders;
-
 const isCommand = key => COMMANDS[key] !== undefined;
 
 const addCodeMeta = code => {
@@ -89,241 +111,6 @@ const addCodeMeta = code => {
   return finalCode;
 };
 
-const TEST_SKETCH = `
-sketch({
-  setup: {
-    canvas: [600, 600]
-  },
-
-  initialState: {
-    c: 0
-  },
-
-  update: state => {
-    state.c += 1;
-
-    return state;
-  },
-
-  draw: state => {
-    const points = Array.from({ length: 60 }).map((_, i) => [
-      Math.sin((state.c + i * 0.8) * 0.1) * 200 + 300,
-      Math.cos((state.c + i * 0.8) * 0.3) * 200 + 300
-    ]);
-
-    return [
-      ["background", { fill: "#eee" }],
-      ["rect", { pos: [0, 0], size: [10, 10], fill: "black" }],
-      ...points.map(p => ["ellipse", { pos: p, size: [8, 8], fill: "#333" }])
-    ];
-  }
-})
-`;
-
-const Inspector = ({ sketch, state, onHover }) => {
-  return (
-    <div className="absolute" style={{ top: 0, left: 0 }}>
-      {sketch.draw(state).map(([command, args], i) => {
-        if (!command || !args) {
-          return null;
-        }
-
-        if (!INSPECTORS[command]) {
-          return null;
-        }
-
-        return (
-          <div
-            key={`${i}-${command}`}
-            onMouseOver={() => onHover(args.__meta)}
-            onMouseOut={e => onHover()}
-          >
-            {INSPECTORS[command](args)}
-          </div>
-        );
-      })}
-    </div>
-  );
-};
-
-const useImmer = initialValue => {
-  const [val, updateValue] = useState(initialValue);
-  return [val, updater => updateValue(immer(updater))];
-};
-
-const Sketch = ({ sketch, setHighlightMarker }) => {
-  const [{ history, idx: historyIdx }, updateHistory] = useImmer({
-    history: [sketch.initialState || {}],
-    idx: 0
-  });
-
-  const [isPlaying, setIsPlaying] = useState(true);
-  const canvasRef = useRef(null);
-  const [width, height] = get(sketch, ["setup", "canvas"], [800, 600]);
-
-  useEffect(() => {
-    window.dumpHistory = () => history;
-
-    return () => {
-      delete window.dumpHistory();
-    };
-  });
-
-  useEffect(() => {
-    if (!canvasRef.current) {
-      return;
-    }
-
-    let frameId = null;
-
-    const ctx = canvasRef.current.getContext("2d");
-    const globals = { width, height };
-
-    const step = () => {
-      for (const operation of sketch.draw(history[historyIdx])) {
-        const [command, args] = operation;
-
-        if (COMMANDS[command]) {
-          COMMANDS[command](ctx, args, globals);
-        }
-      }
-
-      if (isPlaying) {
-        updateHistory(
-          draft => {
-            const newState = sketch.update(draft.history[draft.idx]);
-
-            draft.history.push(newState);
-
-            while (draft.history.length > MAX_HISTORY_LEN + 1) {
-              draft.history.pop();
-            }
-
-            draft.idx = Math.min(MAX_HISTORY_LEN, draft.idx + 1);
-          },
-          () => {
-            frameId = requestAnimationFrame(step);
-          }
-        );
-      } else {
-        frameId = requestAnimationFrame(step);
-      }
-    };
-
-    frameId = requestAnimationFrame(step);
-
-    return () => {
-      if (frameId) {
-        cancelAnimationFrame(frameId);
-      }
-    };
-  });
-
-  return (
-    <div>
-      <div className="mb2">
-        <button
-          className="f7 mr2"
-          onClick={() => {
-            if (!isPlaying) {
-              updateHistory(draft => {
-                draft.history = draft.history.slice(0, draft.idx + 1);
-              });
-            }
-
-            setIsPlaying(!isPlaying);
-          }}
-        >
-          {isPlaying ? "pause" : "play"}
-        </button>
-
-        <span className="f7 mr2 dib tc" style={{ width: 100 }}>
-          {historyIdx} / {history.length - 1}
-        </span>
-
-        <button
-          className="f7 mr2"
-          onClick={() =>
-            updateHistory(draft => {
-              draft.idx = Math.max(draft.idx - 1, 0);
-            })
-          }
-        >
-          {"<<"}
-        </button>
-
-        <input
-          className="mr2"
-          type="range"
-          min={0}
-          max={history.length - 1}
-          step={1}
-          value={historyIdx}
-          onChange={e => {
-            const { value } = e.target;
-
-            updateHistory(draft => {
-              draft.idx = parseInt(value, 10);
-            });
-          }}
-        />
-
-        <button
-          className="f7 mr2"
-          onClick={() =>
-            updateHistory(draft => {
-              draft.idx = Math.min(draft.idx + 1, draft.history.length - 1);
-            })
-          }
-        >
-          {">>"}
-        </button>
-      </div>
-
-      <div className="relative ba b--silver">
-        <canvas width={width} height={height} ref={canvasRef} />
-
-        {!isPlaying && (
-          <Inspector
-            state={history[historyIdx]}
-            sketch={sketch}
-            onHover={e =>
-              setHighlightMarker(
-                e
-                  ? {
-                      startRow: e.lineStart - 1,
-                      endRow: e.lineStart,
-                      className: "highlight-marker",
-                      type: "background"
-                    }
-                  : {}
-              )
-            }
-          />
-        )}
-      </div>
-    </div>
-  );
-};
-
-const Editor = ({ code, highlightMarker, onChange, evalError }) => {
-  return (
-    <CodeMirror
-      className="h-100"
-      value={code}
-      onChange={e => onChange(e)}
-      onCursor={e => {
-        const cursor = e.getCursor();
-        const token = e.getTokenAt(cursor);
-        const coords = e.cursorCoords();
-
-        // TODO: overlay slider!
-        console.log(token.type, token.string, coords);
-      }}
-    />
-  );
-};
-
 export default () => {
   const [code, setCode] = useState(TEST_SKETCH);
   const [sketch, setSketch] = useState(null);
@@ -340,7 +127,6 @@ export default () => {
             sketch.draw(sketch.update(sketch.initialState || {}));
           } catch (e) {
             isExecuting = false;
-            console.log("eval err", e.toString());
             setEvalError({ msg: e.toString() });
           }
 

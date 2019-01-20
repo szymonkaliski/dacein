@@ -25,3 +25,29 @@ export const INSPECTORS = {
     );
   }
 };
+
+export const Inspector = ({ sketch, state, onHover }) => {
+  return (
+    <div className="absolute" style={{ top: 0, left: 0 }}>
+      {sketch.draw(state).map(([command, args], i) => {
+        if (!command || !args) {
+          return null;
+        }
+
+        if (!INSPECTORS[command]) {
+          return null;
+        }
+
+        return (
+          <div
+            key={`${i}-${command}`}
+            onMouseOver={() => onHover(args.__meta)}
+            onMouseOut={e => onHover()}
+          >
+            {INSPECTORS[command](args)}
+          </div>
+        );
+      })}
+    </div>
+  );
+};
