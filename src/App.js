@@ -10,36 +10,37 @@ import { Editor } from "./editor";
 import "tachyons";
 import "./style.css";
 
-const TEST_SKETCH = `
-sketch({
+const TEST_SKETCH = `sketch({
   setup: {
     canvas: [600, 600]
   },
 
   initialState: {
-    c: 0
+    c: 0,
+    d: 0
   },
 
   update: state => {
     state.c += 1;
+    state.d += 0.001;
 
     return state;
   },
 
   draw: state => {
-    const points = Array.from({ length: 60 }).map((_, i) => [
-      Math.sin((state.c + i * 0.8) * 0.1) * 200 + 300,
-      Math.cos((state.c + i * 0.8) * 0.3) * 200 + 300
+    const points = Array.from({ length: 439 }).map((_, i) => [
+      Math.sin((state.c + i * 0.8) * 0.0004) * 200 + 300,
+      Math.sin((state.c + i * 0.8) * state.d * 0.1) * 203 + 300
     ]);
 
+    const r = 2;
+
     return [
-      ["background", { fill: "#eee" }],
-      ["rect", { pos: [0, 0], size: [10, 10], fill: "black" }],
-      ...points.map(p => ["ellipse", { pos: p, size: [8, 8], fill: "#333" }])
+      ["background", { fill: "#481212" }],
+      ...points.map(p => ["ellipse", { pos: p, size: [r, r], fill: "#d09191" }])
     ];
   }
-})
-`;
+});`;
 
 const COMPILE_DEBOUNCE_TIME = 16;
 const Builders = recast.types.builders;

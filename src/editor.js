@@ -1,20 +1,56 @@
 import React, { useState } from "react";
 import { Controlled as CodeMirror } from "react-codemirror2";
+import { ChromePicker } from "react-color";
 
 import "codemirror/lib/codemirror.css";
 import "codemirror/mode/javascript/javascript";
 
-const Picker = ({ type, coords, value, onChange }) => {
-  if (type !== "number") {
-    return null;
+const getColorFormat = str => {
+  const RE_HSL = new RegExp(
+    /hsla?\(\s*(\d{1,3})\s*,\s*(\d{1,3}%)\s*,\s*(\d{1,3}%)\s*(?:\s*,\s*(\d+(?:\.\d+)?)\s*)?\)/g
+  );
+  const RE_RGB = new RegExp(/rgb\((\d{1,3}),\s*(\d{1,3}),\s*(\d{1,3})\)/g);
+  const RE_HEX = new RegExp(/#[a-fA-F0-9]{3,6}/g);
+
+  if (str.match(RE_HSL)) {
+    return "hsl";
   }
 
+  if (str.match(RE_RGB)) {
+    return "rgb";
+  }
+
+  if (str.match(RE_HEX)) {
+    return "hex";
+  }
+
+  return null;
+};
+
+const stringifyColorFormat = (v, format) => {
+  if (format === "hex") {
+    return `"${v.hex}"`;
+  }
+
+  if (format === "hsl") {
+    return `"hsl(${v.hsl.h}, ${v.hsl.s}, ${v.hsl.l}, ${v.hsl.a})"`;
+  }
+
+  if (format === "rgb") {
+    return `"rgb(${v.rgb.r}, ${v.rgb.g}, ${v.rgb.b}, ${v.rgb.a})"`;
+  }
+
+  return null;
+};
+
+const NumberPicker = ({ value, coords, onChange }) => {
   const [tmpValue, setTmpValue] = useState(value);
 
-  // TODO: smarter min/max/step
-  const min = value - value * 2;
-  const max = value + value * 2;
-  const step = 0.001;
+  const exp = Math.round(Math.log10(Math.abs(value)));
+
+  const min = 0;
+  const max = Math.pow(10, exp + 1);
+  const step = exp <= 0 ? 1 / Math.pow(10, Math.abs(exp) + 2) : 1;
 
   return (
     <div
@@ -34,6 +70,38 @@ const Picker = ({ type, coords, value, onChange }) => {
       />
     </div>
   );
+};
+
+const ColorPicker = ({ value, coords, onChange }) => {
+  const [tmpValue, setTmpValue] = useState(value.replace(/"/g, ""));
+  const format = getColorFormat(value);
+
+  return (
+    <div
+      className="absolute pa1 bg-light-gray"
+      style={{ top: coords.top - 300, left: coords.left, zIndex: 10 }}
+    >
+      <ChromePicker
+        color={tmpValue}
+        onChange={e => {
+          setTmpValue(e[format]);
+          onChange(stringifyColorFormat(e, format));
+        }}
+      />
+    </div>
+  );
+};
+
+const Picker = ({ type, coords, value, onChange }) => {
+  if (type === "number") {
+    return <NumberPicker value={value} coords={coords} onChange={onChange} />;
+  }
+
+  if (getColorFormat(value) !== null) {
+    return <ColorPicker value={value} coords={coords} onChange={onChange} />;
+  }
+
+  return null;
 };
 
 export const Editor = ({ code, highlightMarker, onChange, evalError }) => {
