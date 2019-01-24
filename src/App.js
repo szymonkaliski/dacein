@@ -16,11 +16,27 @@ const TEST_SKETCH = `sketch({
   },
 
   initialState: {
-    c: 0
+    c: 0,
+    mousePos: [0, 0],
+    mouseDown: false
   },
 
-  update: state => {
-    state.c += 1;
+  update: (state, events) => {
+    events.forEach(e => {
+      if (e.source === "mousemove") {
+        state.mousePos = [e.x, e.y];
+      }
+
+      if (e.source === "mousedown") {
+        state.mouseDown = true;
+      }
+
+      if (e.source === "mouseup") {
+        state.mouseDown = false;
+      }
+    });
+
+    state.c += 0.01;
 
     return state;
   },
@@ -35,7 +51,8 @@ const TEST_SKETCH = `sketch({
 
     return [
       ["background", { fill: "#481212" }],
-      ...points.map(p => ["ellipse", { pos: p, size: [r, r], fill: "#d09191" }])
+      ...points.map(p => ["ellipse", { pos: p, size: [r, r], fill: "#d09191" }]),
+      ...(state.mouseDown ? points.map(p => ["line", { a: state.mousePos, b: p, stroke: "#d09191" }]) : [])
     ];
   }
 });`;
@@ -124,7 +141,7 @@ export const App = () => {
           let isExecuting = true;
 
           try {
-            sketch.draw(sketch.update(sketch.initialState || {}));
+            sketch.draw(sketch.update(sketch.initialState || {}, []));
           } catch (e) {
             isExecuting = false;
             setEvalError({ msg: e.toString() });
@@ -169,9 +186,7 @@ export const App = () => {
 
   return (
     <div className="sans-serif pa2 flex">
-      {sketch && (
-        <Sketch sketch={sketch} setHighlight={setHighlight} />
-      )}
+      {sketch && <Sketch sketch={sketch} setHighlight={setHighlight} />}
 
       <div className="ml2 ba b--light-gray">
         <Editor

@@ -8,19 +8,23 @@ import { useImmer } from "./utils";
 const MAX_HISTORY_LEN = 1000;
 
 export const Sketch = ({ sketch, setHighlight }) => {
-  const [{ history, idx: historyIdx }, updateHistory] = useImmer({
-    history: [sketch.initialState || {}],
+  const [
+    { stateHistory, eventsHistory, idx: historyIdx },
+    updateHistory
+  ] = useImmer({
+    stateHistory: [sketch.initialState || {}],
+    eventsHistory: [[]],
     idx: 0
   });
 
-  const [isPlaying, setIsPlaying] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(true);
   const canvasRef = useRef(null);
   const [width, height] = get(sketch, ["setup", "canvas"], [800, 600]);
 
   const globals = { width, height };
 
   useEffect(() => {
-    window.dumpHistory = () => history;
+    window.dumpHistory = () => ({ stateHistory, eventsHistory });
 
     return () => {
       delete window.dumpHistory();
@@ -32,12 +36,64 @@ export const Sketch = ({ sketch, setHighlight }) => {
       return;
     }
 
+    // events
+
+    const bbox = canvasRef.current.getBoundingClientRect();
+
+    let events = [];
+
+    const makeOnMouse = type => e => {
+      events.push({
+        source: type,
+        x: e.clientX - bbox.left,
+        y: e.clientY - bbox.top
+      });
+    };
+
+    const onMouseMove = makeOnMouse("mousemove");
+    const onMouseDown = makeOnMouse("mousedown");
+    const onMouseUp = makeOnMouse("mouseup");
+    const onMouseClick = makeOnMouse("mouseclick");
+
+    const onKeyDown = e => {
+      events.push({
+        source: "keydown",
+        key: e.key,
+        code: e.code,
+        ctrlKey: e.ctrlKey,
+        shiftKey: e.shiftKey,
+        altKey: e.altKey,
+        metaKey: e.metaKey
+      });
+    };
+
+    const onKeyUp = e => {
+      events.push({
+        source: "keydown",
+        key: e.key,
+        code: e.code,
+        ctrlKey: e.ctrlKey,
+        shiftKey: e.shiftKey,
+        altKey: e.altKey,
+        metaKey: e.metaKey
+      });
+    };
+
+    canvasRef.current.addEventListener("mousemove", onMouseMove);
+    canvasRef.current.addEventListener("mousedown", onMouseDown);
+    canvasRef.current.addEventListener("mouseup", onMouseUp);
+    canvasRef.current.addEventListener("click", onMouseClick);
+    canvasRef.current.addEventListener("keydown", onKeyDown);
+    canvasRef.current.addEventListener("keyup", onKeyUp);
+
+    // play
+
     let frameId = null;
 
     const ctx = canvasRef.current.getContext("2d");
 
     const step = () => {
-      for (const operation of sketch.draw(history[historyIdx])) {
+      for (const operation of sketch.draw(stateHistory[historyIdx])) {
         const [command, args] = operation;
 
         if (COMMANDS[command]) {
@@ -48,12 +104,18 @@ export const Sketch = ({ sketch, setHighlight }) => {
       if (isPlaying) {
         updateHistory(
           draft => {
-            const newState = sketch.update(draft.history[draft.idx]);
+            const newState = sketch.update(
+              draft.stateHistory[draft.idx],
+              draft.eventsHistory[draft.idx],
+              globals
+            );
 
-            draft.history.push(newState);
+            draft.stateHistory.push(newState);
+            draft.eventsHistory.push(events);
 
-            while (draft.history.length > MAX_HISTORY_LEN + 1) {
-              draft.history.pop();
+            while (draft.stateHistory.length > MAX_HISTORY_LEN + 1) {
+              draft.stateHistory.pop();
+              draft.eventsHistory.pop();
             }
 
             draft.idx = Math.min(MAX_HISTORY_LEN, draft.idx + 1);
@@ -71,6 +133,13 @@ export const Sketch = ({ sketch, setHighlight }) => {
       if (frameId) {
         cancelAnimationFrame(frameId);
       }
+
+      canvasRef.current.removeEventListener("mousemove", onMouseMove);
+      canvasRef.current.removeEventListener("mousedown", onMouseDown);
+      canvasRef.current.removeEventListener("mouseup", onMouseUp);
+      canvasRef.current.removeEventListener("click", onMouseClick);
+      canvasRef.current.removeEventListener("keydown", onKeyDown);
+      canvasRef.current.removeEventListener("keyup", onKeyUp);
     };
   });
 
@@ -82,7 +151,7 @@ export const Sketch = ({ sketch, setHighlight }) => {
           onClick={() => {
             if (!isPlaying) {
               updateHistory(draft => {
-                draft.history = draft.history.slice(0, draft.idx + 1);
+                draft.stateHistory = draft.stateHistory.slice(0, draft.idx + 1);
               });
             }
 
@@ -93,7 +162,7 @@ export const Sketch = ({ sketch, setHighlight }) => {
         </button>
 
         <span className="f7 mr2 dib tc" style={{ width: 100 }}>
-          {historyIdx} / {history.length - 1}
+          {historyIdx} / {stateHistory.length - 1}
         </span>
 
         <button
@@ -111,7 +180,7 @@ export const Sketch = ({ sketch, setHighlight }) => {
           className="mr2"
           type="range"
           min={0}
-          max={history.length - 1}
+          max={stateHistory.length - 1}
           step={1}
           value={historyIdx}
           onChange={e => {
@@ -127,7 +196,10 @@ export const Sketch = ({ sketch, setHighlight }) => {
           className="f7 mr2"
           onClick={() =>
             updateHistory(draft => {
-              draft.idx = Math.min(draft.idx + 1, draft.history.length - 1);
+              draft.idx = Math.min(
+                draft.idx + 1,
+                draft.stateHistory.length - 1
+              );
             })
           }
         >
@@ -140,7 +212,7 @@ export const Sketch = ({ sketch, setHighlight }) => {
 
         {!isPlaying && (
           <Inspector
-            state={history[historyIdx]}
+            state={stateHistory[historyIdx]}
             globals={globals}
             sketch={sketch}
             onHover={e =>
