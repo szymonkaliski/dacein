@@ -16,24 +16,22 @@ const TEST_SKETCH = `sketch({
   },
 
   initialState: {
-    c: 0,
-    d: 0
+    c: 0
   },
 
   update: state => {
     state.c += 1;
-    state.d += 0.001;
 
     return state;
   },
 
   draw: state => {
-    const points = Array.from({ length: 439 }).map((_, i) => [
-      Math.sin((state.c + i * 0.8) * 0.0004) * 200 + 300,
-      Math.sin((state.c + i * 0.8) * state.d * 0.1) * 203 + 300
+    const points = Array.from({ length: 40 }).map((_, i) => [
+      Math.sin((state.c + i * 0.8) * 2.0) * 200 + 300,
+      Math.sin((state.c + i * 0.8) * 3.0) * 200 + 300
     ]);
 
-    const r = 2;
+    const r = 8;
 
     return [
       ["background", { fill: "#481212" }],
@@ -117,7 +115,7 @@ export const App = () => {
   const [code, setCode] = useState(TEST_SKETCH);
   const [sketch, setSketch] = useState(null);
   const [evalError, setEvalError] = useState(null);
-  const [highlightMarker, setHighlightMarker] = useState({});
+  const [highlight, setHighlight] = useState(null);
 
   useEffect(
     debounce(() => {
@@ -172,7 +170,7 @@ export const App = () => {
   return (
     <div className="sans-serif pa2 flex">
       {sketch && (
-        <Sketch sketch={sketch} setHighlightMarker={setHighlightMarker} />
+        <Sketch sketch={sketch} setHighlight={setHighlight} />
       )}
 
       <div className="ml2 ba b--light-gray">
@@ -180,7 +178,7 @@ export const App = () => {
           code={code}
           onChange={e => setCode(e)}
           evalError={evalError}
-          highlightMarker={highlightMarker}
+          highlight={highlight}
         />
       </div>
     </div>

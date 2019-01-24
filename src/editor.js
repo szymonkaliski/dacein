@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Controlled as CodeMirror } from "react-codemirror2";
 import { ChromePicker } from "react-color";
 
@@ -104,15 +104,49 @@ const Picker = ({ type, coords, value, onChange }) => {
   return null;
 };
 
-export const Editor = ({ code, highlightMarker, onChange, evalError }) => {
+export const Editor = ({ code, highlight, onChange, evalError }) => {
   const [picker, setPicker] = useState(null);
   const [tmpLength, setTmpLength] = useState(0);
   const [tmpCode, setTmpCode] = useState(code);
+  const [tmpMarker, setTmpMarker] = useState(null);
+  const [instance, setInstance] = useState(null);
+
+  useEffect(
+    () => {
+      if (!instance) {
+        return;
+      }
+
+      if (tmpMarker) {
+        tmpMarker.clear();
+        setTmpMarker(null);
+      }
+
+      if (highlight) {
+        setTmpMarker(
+          instance.markText(
+            { line: highlight.start },
+            { line: highlight.end },
+            { className: "inspector-highlight" }
+          )
+        );
+      }
+
+      return () => {
+        if (tmpMarker) {
+          tmpMarker.clear();
+          setTmpMarker(null);
+        }
+      };
+    },
+    [instance, highlight]
+  );
 
   return (
     <div className="relative">
       <CodeMirror
         className="h-100"
+        editorDidMount={e => setInstance(e)}
         value={tmpCode}
         onBeforeChange={(editor, data, value) => {
           setTmpCode(value);

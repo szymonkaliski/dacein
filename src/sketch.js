@@ -7,15 +7,17 @@ import { useImmer } from "./utils";
 
 const MAX_HISTORY_LEN = 1000;
 
-export const Sketch = ({ sketch, setHighlightMarker }) => {
+export const Sketch = ({ sketch, setHighlight }) => {
   const [{ history, idx: historyIdx }, updateHistory] = useImmer({
     history: [sketch.initialState || {}],
     idx: 0
   });
 
-  const [isPlaying, setIsPlaying] = useState(true);
+  const [isPlaying, setIsPlaying] = useState(false);
   const canvasRef = useRef(null);
   const [width, height] = get(sketch, ["setup", "canvas"], [800, 600]);
+
+  const globals = { width, height };
 
   useEffect(() => {
     window.dumpHistory = () => history;
@@ -33,7 +35,6 @@ export const Sketch = ({ sketch, setHighlightMarker }) => {
     let frameId = null;
 
     const ctx = canvasRef.current.getContext("2d");
-    const globals = { width, height };
 
     const step = () => {
       for (const operation of sketch.draw(history[historyIdx])) {
@@ -140,17 +141,11 @@ export const Sketch = ({ sketch, setHighlightMarker }) => {
         {!isPlaying && (
           <Inspector
             state={history[historyIdx]}
+            globals={globals}
             sketch={sketch}
             onHover={e =>
-              setHighlightMarker(
-                e
-                  ? {
-                      startRow: e.lineStart - 1,
-                      endRow: e.lineStart,
-                      className: "highlight-marker",
-                      type: "background"
-                    }
-                  : {}
+              setHighlight(
+                e ? { start: e.lineStart - 2, end: e.lineStart - 1 } : null
               )
             }
           />

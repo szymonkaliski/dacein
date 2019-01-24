@@ -1,3 +1,7 @@
 .CodeMirror {
   height: auto !important;
 }
+
+.inspector-highlight {
+  background: #eee;
+}
