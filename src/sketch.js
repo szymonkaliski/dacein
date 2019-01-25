@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useRef } from "react";
+import JSONTree from "react-json-tree";
 import { get } from "lodash";
 
 import { COMMANDS } from "./commands";
@@ -7,10 +8,77 @@ import { useImmer } from "./utils";
 
 const MAX_HISTORY_LEN = 1000;
 
+const SketchControls = ({
+  isPlaying,
+  historyIdx,
+  stateHistory,
+  setIsPlaying,
+  setHistory
+}) => (
+  <div>
+    <button
+      className="f7 mr2"
+      onClick={() => {
+        if (!isPlaying) {
+          setHistory(draft => {
+            draft.stateHistory = draft.stateHistory.slice(0, draft.idx + 1);
+          });
+        }
+
+        setIsPlaying(!isPlaying);
+      }}
+    >
+      {isPlaying ? "pause" : "play"}
+    </button>
+
+    <span className="f7 mr2 dib tc" style={{ width: 100 }}>
+      {historyIdx} / {stateHistory.length - 1}
+    </span>
+
+    <button
+      className="f7 mr2"
+      onClick={() =>
+        setHistory(draft => {
+          draft.idx = Math.max(draft.idx - 1, 0);
+        })
+      }
+    >
+      {"<<"}
+    </button>
+
+    <input
+      className="mr2"
+      type="range"
+      min={0}
+      max={stateHistory.length - 1}
+      step={1}
+      value={historyIdx}
+      onChange={e => {
+        const { value } = e.target;
+
+        setHistory(draft => {
+          draft.idx = parseInt(value, 10);
+        });
+      }}
+    />
+
+    <button
+      className="f7 mr2"
+      onClick={() =>
+        setHistory(draft => {
+          draft.idx = Math.min(draft.idx + 1, draft.stateHistory.length - 1);
+        })
+      }
+    >
+      {">>"}
+    </button>
+  </div>
+);
+
 export const Sketch = ({ sketch, setHighlight }) => {
   const [
     { stateHistory, eventsHistory, idx: historyIdx },
-    updateHistory
+    setHistory
   ] = useImmer({
     stateHistory: [sketch.initialState || {}],
     eventsHistory: [[]],
@@ -102,7 +170,7 @@ export const Sketch = ({ sketch, setHighlight }) => {
       }
 
       if (isPlaying) {
-        updateHistory(
+        setHistory(
           draft => {
             const newState = sketch.update(
               draft.stateHistory[draft.idx],
@@ -146,65 +214,13 @@ export const Sketch = ({ sketch, setHighlight }) => {
   return (
     <div>
       <div className="mb2">
-        <button
-          className="f7 mr2"
-          onClick={() => {
-            if (!isPlaying) {
-              updateHistory(draft => {
-                draft.stateHistory = draft.stateHistory.slice(0, draft.idx + 1);
-              });
-            }
-
-            setIsPlaying(!isPlaying);
-          }}
-        >
-          {isPlaying ? "pause" : "play"}
-        </button>
-
-        <span className="f7 mr2 dib tc" style={{ width: 100 }}>
-          {historyIdx} / {stateHistory.length - 1}
-        </span>
-
-        <button
-          className="f7 mr2"
-          onClick={() =>
-            updateHistory(draft => {
-              draft.idx = Math.max(draft.idx - 1, 0);
-            })
-          }
-        >
-          {"<<"}
-        </button>
-
-        <input
-          className="mr2"
-          type="range"
-          min={0}
-          max={stateHistory.length - 1}
-          step={1}
-          value={historyIdx}
-          onChange={e => {
-            const { value } = e.target;
-
-            updateHistory(draft => {
-              draft.idx = parseInt(value, 10);
-            });
-          }}
+        <SketchControls
+          setHistory={setHistory}
+          historyIdx={historyIdx}
+          isPlaying={isPlaying}
+          setIsPlaying={setIsPlaying}
+          stateHistory={stateHistory}
         />
-
-        <button
-          className="f7 mr2"
-          onClick={() =>
-            updateHistory(draft => {
-              draft.idx = Math.min(
-                draft.idx + 1,
-                draft.stateHistory.length - 1
-              );
-            })
-          }
-        >
-          {">>"}
-        </button>
       </div>
 
       <div className="relative ba b--silver">
@@ -222,6 +238,8 @@ export const Sketch = ({ sketch, setHighlight }) => {
             }
           />
         )}
+
+        <JSONTree data={stateHistory[historyIdx]} />
       </div>
     </div>
   );
