@@ -1,5 +1,6 @@
-import React, { useEffect, useState, useRef } from "react";
 import JSONTree from "react-json-tree";
+import PanelGroup from "react-panelgroup";
+import React, { useEffect, useState, useRef } from "react";
 import { get } from "lodash";
 
 import { COMMANDS } from "./commands";
@@ -212,7 +213,7 @@ export const Sketch = ({ sketch, setHighlight }) => {
   });
 
   return (
-    <div>
+    <div className="w-100 h-100">
       <div className="mb2">
         <SketchControls
           setHistory={setHistory}
@@ -223,23 +224,29 @@ export const Sketch = ({ sketch, setHighlight }) => {
         />
       </div>
 
-      <div className="relative ba b--silver">
-        <canvas width={width} height={height} ref={canvasRef} />
+      <div className="h-100">
+        <PanelGroup borderColor="black" direction="column">
+          <div className="relative">
+            <canvas width={width} height={height} ref={canvasRef} />
 
-        {!isPlaying && (
-          <Inspector
-            state={stateHistory[historyIdx]}
-            globals={globals}
-            sketch={sketch}
-            onHover={e =>
-              setHighlight(
-                e ? { start: e.lineStart - 2, end: e.lineStart - 1 } : null
-              )
-            }
-          />
-        )}
+            {!isPlaying && (
+              <Inspector
+                state={stateHistory[historyIdx]}
+                globals={globals}
+                sketch={sketch}
+                onHover={e =>
+                  setHighlight(
+                    e ? { start: e.lineStart - 2, end: e.lineStart - 1 } : null
+                  )
+                }
+              />
+            )}
+          </div>
 
-        <JSONTree data={stateHistory[historyIdx]} />
+          <div>
+            <JSONTree data={stateHistory[historyIdx]} />
+          </div>
+        </PanelGroup>
       </div>
     </div>
   );

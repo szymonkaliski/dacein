@@ -1,3 +1,4 @@
+import PanelGroup from "react-panelgroup";
 import React, { useEffect, useState } from "react";
 import recast from "recast";
 import types from "ast-types";
@@ -51,11 +52,29 @@ const TEST_SKETCH = `sketch({
 
     return [
       ["background", { fill: "#481212" }],
-      ...points.map(p => ["ellipse", { pos: p, size: [r, r], fill: "#d09191" }]),
-      ...(state.mouseDown ? points.map(p => ["line", { a: state.mousePos, b: p, stroke: "#d09191" }]) : [])
+
+      ...points.map(p => [
+        "ellipse",
+        {
+          pos: p,
+          size: [r, r],
+          fill: "#d09191"
+        }
+      ]),
+
+      ...(state.mouseDown
+        ? points.map(p => [
+            "line",
+            {
+              a: state.mousePos,
+              b: p,
+              stroke: "#d09191"
+            }
+          ])
+        : [])
     ];
   }
-});`;
+})`;
 
 const COMPILE_DEBOUNCE_TIME = 16;
 const Builders = recast.types.builders;
@@ -185,17 +204,21 @@ export const App = () => {
   );
 
   return (
-    <div className="sans-serif pa2 flex">
-      {sketch && <Sketch sketch={sketch} setHighlight={setHighlight} />}
+    <div className="sans-serif vh-100">
+      <PanelGroup borderColor="black">
+        <div className="w-100">
+          {sketch && <Sketch sketch={sketch} setHighlight={setHighlight} />}
+        </div>
 
-      <div className="ml2 ba b--light-gray">
-        <Editor
-          code={code}
-          onChange={e => setCode(e)}
-          evalError={evalError}
-          highlight={highlight}
-        />
-      </div>
+        <div className="w-100">
+          <Editor
+            code={code}
+            onChange={e => setCode(e)}
+            evalError={evalError}
+            highlight={highlight}
+          />
+        </div>
+      </PanelGroup>
     </div>
   );
 };
