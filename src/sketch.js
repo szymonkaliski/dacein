@@ -86,9 +86,9 @@ export const Sketch = ({ sketch, setHighlight }) => {
     idx: 0
   });
 
-  const [isPlaying, setIsPlaying] = useState(true);
+  const [isPlaying, setIsPlaying] = useState(false);
   const canvasRef = useRef(null);
-  const [width, height] = get(sketch, ["setup", "canvas"], [800, 600]);
+  const [width, height] = get(sketch, ["setup", "size"], [800, 600]);
 
   const globals = { width, height };
 

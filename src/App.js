@@ -1,49 +1,40 @@
 import PanelGroup from "react-panelgroup";
 import React, { useEffect, useState } from "react";
-import recast from "recast";
-import types from "ast-types";
-import { get, debounce } from "lodash";
+import { debounce } from "lodash";
+import { require } from "d3-require";
 
-import { COMMANDS } from "./commands";
-import { Sketch } from "./sketch";
 import { Editor } from "./editor";
+import { Sketch } from "./sketch";
+import { addMeta, processRequire } from "./ast-transforms";
 
 import "tachyons";
 import "./style.css";
 
-const TEST_SKETCH = `sketch({
+require("lodash").then(lodash => {
+  require("d3").then(d3 => {
+    console.log({ lodash, d3 });
+  });
+});
+
+const TEST_SKETCH = `const _ = require("lodash");
+
+sketch({
   setup: {
-    canvas: [600, 600]
+    size: [600, 600]
   },
 
   initialState: {
-    c: 0,
-    mousePos: [0, 0],
-    mouseDown: false
+    c: 0
   },
 
-  update: (state, events) => {
-    events.forEach(e => {
-      if (e.source === "mousemove") {
-        state.mousePos = [e.x, e.y];
-      }
-
-      if (e.source === "mousedown") {
-        state.mouseDown = true;
-      }
-
-      if (e.source === "mouseup") {
-        state.mouseDown = false;
-      }
-    });
-
+  update: (state) => {
     state.c += 0.01;
 
     return state;
   },
 
   draw: state => {
-    const points = Array.from({ length: 40 }).map((_, i) => [
+    const points = _.range(40).map((_, i) => [
       Math.sin((state.c + i * 0.8) * 2.0) * 200 + 300,
       Math.sin((state.c + i * 0.8) * 3.0) * 200 + 300
     ]);
@@ -52,100 +43,12 @@ const TEST_SKETCH = `sketch({
 
     return [
       ["background", { fill: "#481212" }],
-
-      ...points.map(p => [
-        "ellipse",
-        {
-          pos: p,
-          size: [r, r],
-          fill: "#d09191"
-        }
-      ]),
-
-      ...(state.mouseDown
-        ? points.map(p => [
-            "line",
-            {
-              a: state.mousePos,
-              b: p,
-              stroke: "#d09191"
-            }
-          ])
-        : [])
+      ...points.map(p => [ "ellipse", { pos: p, size: [r, r], fill: "#d09191" } ]),
     ];
   }
 })`;
 
 const COMPILE_DEBOUNCE_TIME = 16;
-const Builders = recast.types.builders;
-const isCommand = key => COMMANDS[key] !== undefined;
-
-const addCodeMeta = code => {
-  const ast = recast.parse(code);
-
-  types.visit(ast, {
-    visitExpressionStatement: function(path) {
-      if (path.value.expression.callee.name === "sketch") {
-        this.traverse(path);
-      } else {
-        return false;
-      }
-    },
-
-    visitProperty: function(path) {
-      if (path.value.key.name === "draw") {
-        this.traverse(path);
-      } else {
-        return false;
-      }
-    },
-
-    visitReturnStatement: function(path) {
-      this.traverse(path);
-    },
-
-    visitArrayExpression: function(path) {
-      const elements = path.value.elements || [];
-      const maybeCommand = elements[0];
-
-      // TODO: traverse up to parent ArrayExpression
-      if (isCommand(get(maybeCommand, "value"))) {
-        if (elements[1].type === "ObjectExpression") {
-          return Builders.arrayExpression([
-            elements[0],
-            Builders.objectExpression([
-              ...elements[1].properties,
-              Builders.property(
-                "init",
-                Builders.identifier("__meta"),
-                Builders.objectExpression([
-                  Builders.property(
-                    "init",
-                    Builders.identifier("lineStart"),
-                    Builders.literal(maybeCommand.loc.start.line)
-                  ),
-                  Builders.property(
-                    "init",
-                    Builders.identifier("lineEnd"),
-                    Builders.literal(maybeCommand.loc.end.line)
-                  )
-                ])
-              )
-            ])
-          ]);
-        }
-
-        return false;
-      } else {
-        this.traverse(path);
-      }
-    }
-  });
-
-  const { code: finalCode } = recast.print(ast);
-
-  return finalCode;
-};
 
 export const App = () => {
   const [code, setCode] = useState(TEST_SKETCH);
@@ -155,6 +58,10 @@ export const App = () => {
 
   useEffect(
     debounce(() => {
+      if (!window.require) {
+        window.require = require;
+      }
+
       if (!window.sketch) {
         window.sketch = sketch => {
           let isExecuting = true;
@@ -162,6 +69,8 @@ export const App = () => {
           try {
             sketch.draw(sketch.update(sketch.initialState || {}, []));
           } catch (e) {
+            console.warn(e);
+
             isExecuting = false;
             setEvalError({ msg: e.toString() });
           }
@@ -173,14 +82,16 @@ export const App = () => {
       }
 
       try {
-        const codeWithMeta = addCodeMeta(code);
+        const processedCode = processRequire(addMeta(code));
 
         eval(`
           const sketch = window.sketch;
 
-          ${codeWithMeta}
+          ${processedCode}
         `);
       } catch (e) {
+        console.warn(e);
+
         const { line, column } = e;
         setEvalError({ msg: e.toString(), line, column });
       }
