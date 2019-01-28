@@ -104,7 +104,6 @@ export const processRequire = code => {
         const name = path.parentPath.parentPath.value.id.name;
         const loc = path.parentPath.parentPath.parentPath.value[0].loc;
 
-        // FIXME: assuming require takes the whole line
         requires.push({
           start: loc.start.line - 1,
           end: loc.end.line - 1,
@@ -146,7 +145,10 @@ export const processRequire = code => {
 
     ${codeWithoutRequire}
 
-    ${requires.map(({ name, arg }) => `});`).join("\n")}
+    ${requires
+      // TODO: set error from here
+      .map(({ name, arg }) => `}).catch(e => console.warn(e));`)
+      .join("\n")}
   `;
 
   return finalCode;

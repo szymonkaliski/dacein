@@ -7,7 +7,7 @@ import { COMMANDS } from "./commands";
 import { Inspector } from "./inspector";
 import { useImmer } from "./utils";
 
-const MAX_HISTORY_LEN = 1000;
+const MAX_HISTORY_LEN = 100;
 
 const SketchControls = ({
   isPlaying,
@@ -86,7 +86,7 @@ export const Sketch = ({ sketch, setHighlight }) => {
     idx: 0
   });
 
-  const [isPlaying, setIsPlaying] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(true);
   const canvasRef = useRef(null);
   const [width, height] = get(sketch, ["setup", "size"], [800, 600]);
 
@@ -174,7 +174,7 @@ export const Sketch = ({ sketch, setHighlight }) => {
         setHistory(
           draft => {
             const newState = sketch.update(
-              draft.stateHistory[draft.idx],
+              Object.assign({}, sketch.initialState, draft.stateHistory[draft.idx]),
               draft.eventsHistory[draft.idx],
               globals
             );
@@ -183,8 +183,8 @@ export const Sketch = ({ sketch, setHighlight }) => {
             draft.eventsHistory.push(events);
 
             while (draft.stateHistory.length > MAX_HISTORY_LEN + 1) {
-              draft.stateHistory.pop();
-              draft.eventsHistory.pop();
+              draft.stateHistory.shift();
+              draft.eventsHistory.shift();
             }
 
             draft.idx = Math.min(MAX_HISTORY_LEN, draft.idx + 1);
