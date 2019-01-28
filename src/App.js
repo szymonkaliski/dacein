@@ -10,12 +10,6 @@ import { addMeta, processRequire } from "./ast-transforms";
 import "tachyons";
 import "./style.css";
 
-require("lodash").then(lodash => {
-  require("d3").then(d3 => {
-    console.log({ lodash, d3 });
-  });
-});
-
 const TEST_SKETCH = `const _ = require("lodash");
 
 sketch({
@@ -42,8 +36,14 @@ sketch({
     const r = 8;
 
     return [
-      ["background", { fill: "#481212" }],
-      ...points.map(p => [ "ellipse", { pos: p, size: [r, r], fill: "#d09191" } ]),
+      [
+        "background",
+        { fill: "#481212" }
+      ],
+      ...points.map(p => [
+        "ellipse",
+        { pos: p, size: [r, r], fill: "#d09191" }
+      ]),
     ];
   }
 })`;

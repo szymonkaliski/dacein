@@ -236,7 +236,7 @@ export const Sketch = ({ sketch, setHighlight }) => {
                 sketch={sketch}
                 onHover={e =>
                   setHighlight(
-                    e ? { start: e.lineStart - 2, end: e.lineStart - 1 } : null
+                    e ? { start: e.lineStart - 2, end: e.lineEnd - 1 } : null
                   )
                 }
               />

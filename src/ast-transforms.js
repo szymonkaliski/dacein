@@ -35,8 +35,26 @@ export const addMeta = code => {
       const elements = path.value.elements || [];
       const maybeCommand = elements[0];
 
-      // TODO: traverse up to parent ArrayExpression
       if (isCommand(get(maybeCommand, "value"))) {
+        let loc = maybeCommand.loc;
+        let searchPath = path;
+
+        while (searchPath) {
+          if (
+            get(searchPath, ["value", "body", "type"]) === "ArrayExpression" ||
+            get(searchPath, ["value", "type"]) === "ArrayExpression"
+          ) {
+            loc = {
+              start: get(searchPath, ["value", "loc", "start"]),
+              end: get(searchPath, ["value", "loc", "end"])
+            };
+
+            searchPath = undefined;
+          } else {
+            searchPath = get(searchPath, "parentPath");
+          }
+        }
+
         if (elements[1].type === "ObjectExpression") {
           return Builders.arrayExpression([
             elements[0],
@@ -49,12 +67,12 @@ export const addMeta = code => {
                   Builders.property(
                     "init",
                     Builders.identifier("lineStart"),
-                    Builders.literal(maybeCommand.loc.start.line)
+                    Builders.literal(loc.start.line)
                   ),
                   Builders.property(
                     "init",
                     Builders.identifier("lineEnd"),
-                    Builders.literal(maybeCommand.loc.end.line)
+                    Builders.literal(loc.end.line)
                   )
                 ])
               )
