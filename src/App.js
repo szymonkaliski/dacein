@@ -1,8 +1,8 @@
-import PanelGroup from "react-panelgroup";
 import React, { useEffect, useState } from "react";
 import { debounce } from "lodash";
 import { require } from "d3-require";
 
+import Panel from "./panel"
 import { Editor } from "./editor";
 import { Sketch } from "./sketch";
 import { addMeta, processRequire } from "./ast-transforms";
@@ -115,21 +115,25 @@ export const App = () => {
   );
 
   return (
-    <div className="sans-serif vh-100">
-      <PanelGroup borderColor="black">
-        <div className="w-100">
-          {sketch && <Sketch sketch={sketch} setHighlight={setHighlight} />}
-        </div>
+    <div className="sans-serif vh-100 bg-dark-gray near-white">
+      <Panel.Parent>
+        <Panel.Child>
+          <div className="w-100">
+            {sketch && <Sketch sketch={sketch} setHighlight={setHighlight} />}
+          </div>
+        </Panel.Child>
 
-        <div className="w-100">
-          <Editor
-            code={code}
-            onChange={e => setCode(e)}
-            evalError={evalError}
-            highlight={highlight}
-          />
-        </div>
-      </PanelGroup>
+        <Panel.Child>
+          <div className="w-100">
+            <Editor
+              code={code}
+              onChange={e => setCode(e)}
+              evalError={evalError}
+              highlight={highlight}
+            />
+          </div>
+        </Panel.Child>
+      </Panel.Parent>
     </div>
   );
 };

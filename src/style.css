@@ -1,5 +1,12 @@
 .CodeMirror {
   height: auto !important;
+  font-family: Consolas, monaco, monospace;
+  font-size: 0.875rem;
+}
+
+.react-json-view {
+  font-family: Consolas, monaco, monospace !important;
+  font-size: 0.875rem !important;
 }
 
 .inspector-highlight {

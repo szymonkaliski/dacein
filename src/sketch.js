@@ -1,5 +1,4 @@
-import JSONTree from "react-json-tree";
-import PanelGroup from "react-panelgroup";
+import JSON from "react-json-view";
 import React, { useEffect, useState, useRef } from "react";
 import { get } from "lodash";
 
@@ -174,7 +173,11 @@ export const Sketch = ({ sketch, setHighlight }) => {
         setHistory(
           draft => {
             const newState = sketch.update(
-              Object.assign({}, sketch.initialState, draft.stateHistory[draft.idx]),
+              Object.assign(
+                {},
+                sketch.initialState,
+                draft.stateHistory[draft.idx]
+              ),
               draft.eventsHistory[draft.idx],
               globals
             );
@@ -224,29 +227,32 @@ export const Sketch = ({ sketch, setHighlight }) => {
         />
       </div>
 
-      <div className="h-100">
-        <PanelGroup borderColor="black" direction="column">
-          <div className="relative">
-            <canvas width={width} height={height} ref={canvasRef} />
+      <div className="relative">
+        <canvas width={width} height={height} ref={canvasRef} />
 
-            {!isPlaying && (
-              <Inspector
-                state={stateHistory[historyIdx]}
-                globals={globals}
-                sketch={sketch}
-                onHover={e =>
-                  setHighlight(
-                    e ? { start: e.lineStart - 2, end: e.lineEnd - 1 } : null
-                  )
-                }
-              />
-            )}
-          </div>
+        {!isPlaying && (
+          <Inspector
+            state={stateHistory[historyIdx]}
+            globals={globals}
+            sketch={sketch}
+            onHover={e =>
+              setHighlight(
+                e ? { start: e.lineStart - 2, end: e.lineEnd - 1 } : null
+              )
+            }
+          />
+        )}
+      </div>
 
-          <div>
-            <JSONTree data={stateHistory[historyIdx]} />
-          </div>
-        </PanelGroup>
+      <div>
+        <JSON
+          src={stateHistory[historyIdx]}
+          enableClipboard={false}
+          displayDataTypes={false}
+          displayObjectSize={false}
+          indentWidth={2}
+          theme="grayscale"
+        />
       </div>
     </div>
   );

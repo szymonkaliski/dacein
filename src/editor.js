@@ -3,6 +3,7 @@ import { Controlled as CodeMirror } from "react-codemirror2";
 import { ChromePicker } from "react-color";
 
 import "codemirror/lib/codemirror.css";
+import "./codemirror-base16-grayscale-dark.css";
 import "codemirror/mode/javascript/javascript";
 
 const getColorFormat = str => {
@@ -177,7 +178,11 @@ export const Editor = ({ code, highlight, onChange, evalError }) => {
             }
           });
         }}
-        options={{ autofocus: true }}
+        options={{
+          autofocus: true,
+          lineNumbers: true,
+          theme: "base16-grayscale-dark"
+        }}
       />
 
       {picker && (

@@ -1,0 +1,33 @@
+/*
+
+    Name:       Base16 Grayscale Dark
+    Author:     Alexandre Gavioli (https://github.com/Alexx2/)
+
+    CodeMirror template by Jan T. Sott (https://github.com/idleberg)
+    Original Base16 color scheme by Chris Kempson (https://github.com/chriskempson/base16)
+
+*/
+
+.cm-s-base16-grayscale-dark.CodeMirror {background: #101010; color: #e3e3e3;}
+.cm-s-base16-grayscale-dark div.CodeMirror-selected {background: #252525 !important;}
+.cm-s-base16-grayscale-dark .CodeMirror-gutters {background: #101010; border-right: 0px;}
+.cm-s-base16-grayscale-dark .CodeMirror-linenumber {color: #525252;}
+.cm-s-base16-grayscale-dark .CodeMirror-cursor {border-left: 1px solid #ababab !important;}
+
+.cm-s-base16-grayscale-dark span.cm-comment {color: #5e5e5e;}
+.cm-s-base16-grayscale-dark span.cm-atom {color: #747474;}
+.cm-s-base16-grayscale-dark span.cm-number {color: #747474;}
+
+.cm-s-base16-grayscale-dark span.cm-property, .cm-s-base16-grayscale-dark span.cm-attribute {color: #8e8e8e;}
+.cm-s-base16-grayscale-dark span.cm-keyword {color: #7c7c7c;}
+.cm-s-base16-grayscale-dark span.cm-string {color: #a0a0a0;}
+
+.cm-s-base16-grayscale-dark span.cm-variable {color: #8e8e8e;}
+.cm-s-base16-grayscale-dark span.cm-variable-2 {color: #686868;}
+.cm-s-base16-grayscale-dark span.cm-def {color: #999999;}
+.cm-s-base16-grayscale-dark span.cm-error {background: #7c7c7c; color: #ababab;}
+.cm-s-base16-grayscale-dark span.cm-bracket {color: #e3e3e3;}
+.cm-s-base16-grayscale-dark span.cm-tag {color: #7c7c7c;}
+.cm-s-base16-grayscale-dark span.cm-link {color: #747474;}
+
+.cm-s-base16-grayscale-dark .CodeMirror-matchingbracket { text-decoration: underline; color: white !important;}
