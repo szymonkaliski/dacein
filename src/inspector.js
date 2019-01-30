@@ -1,59 +1,62 @@
-import React from "react";
+import leftPad from "left-pad";
+import { get } from "lodash";
 
-export const INSPECTORS = {
-  background: (_, { width, height }) => {
-    return (
-      <div className="absolute absolute--fill" style={{ width, height }} />
-    );
-  },
+import { COMMANDS } from "./commands";
 
-  ellipse: ({ pos, size, fill, stroke }) => {
-    const [x, y] = pos;
-    const [w, h] = size;
-
-    return (
-      <div
-        style={{ left: x - w, top: y - h, width: w * 2, height: h * 2 }}
-        className="absolute"
-      />
-    );
-  },
-
-  rect: ({ pos, size, fill, stroke }) => {
-    const [x, y] = pos;
-    const [w, h] = size;
-
-    return (
-      <div
-        style={{ left: x, top: y, width: w, height: h }}
-        className="absolute"
-      />
-    );
-  }
+const encodeInColor = num => {
+  const hex = num.toString(16);
+  return `#${leftPad(hex, 6, "0")}`;
 };
 
-export const Inspector = ({ sketch, state, globals, onHover }) => {
-  return (
-    <div className="absolute" style={{ top: 0, left: 0 }}>
-      {sketch.draw(state).map(([command, args], i) => {
-        if (!command || !args) {
-          return null;
-        }
+const decodeFromColor = hex => {
+  return parseInt(`0x${hex}`);
+};
 
-        if (!INSPECTORS[command]) {
-          return null;
-        }
+export const makeInspector = ({ globals, sketch }) => {
+  const canvas = document.createElement("canvas");
 
-        return (
-          <div
-            key={`${i}-${command}`}
-            onMouseOver={() => onHover(args.__meta)}
-            onMouseOut={e => onHover()}
-          >
-            {INSPECTORS[command](args, globals)}
-          </div>
-        );
-      })}
-    </div>
-  );
+  canvas.width = globals.width;
+  canvas.height = globals.height;
+
+  const ctx = canvas.getContext("2d");
+
+  let state;
+  let memo;
+
+  const setState = _ => (state = _);
+
+  const draw = () => {
+    let i = 0;
+
+    memo = sketch.draw(state);
+
+    for (const operation of memo) {
+      const [command, args] = operation;
+
+      const argsModded = Object.assign(args, {
+        fill: args.fill ? encodeInColor(i) : undefined,
+        stroke: args.stroke ? encodeInColor(i) : undefined
+      });
+
+      if (COMMANDS[command]) {
+        COMMANDS[command](ctx, argsModded, globals);
+      }
+
+      i++;
+    }
+  };
+
+  const onHover = (x, y) => {
+    const data = ctx.getImageData(x, y, 1, 1).data.slice(0, 3);
+    const hex = data.map(n => n.toString(16)).join("");
+    const id = decodeFromColor(hex);
+
+    return get(memo, [id, 1, "__meta"]);
+  };
+
+  return {
+    setState,
+    draw,
+    onHover
+  };
 };

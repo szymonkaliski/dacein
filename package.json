@@ -9,6 +9,7 @@
     "codemirror": "^5.42.2",
     "d3-require": "^1.2.2",
     "immer": "^1.10.5",
+    "left-pad": "^1.3.0",
     "lodash": "^4.17.11",
     "react": "^16.7.0-alpha.2",
     "react-codemirror2": "^5.1.0",

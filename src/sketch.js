@@ -3,7 +3,7 @@ import React, { useEffect, useState, useRef } from "react";
 import { get } from "lodash";
 
 import { COMMANDS } from "./commands";
-import { Inspector } from "./inspector";
+import { makeInspector } from "./inspector";
 import { useImmer } from "./utils";
 
 const MAX_HISTORY_LEN = 100;
@@ -215,6 +215,45 @@ export const Sketch = ({ sketch, setHighlight }) => {
     };
   });
 
+  useEffect(
+    () => {
+      if (!canvasRef.current) {
+        return;
+      }
+
+      if (isPlaying) {
+        return;
+      }
+
+      const state = stateHistory[historyIdx];
+      const inspector = makeInspector({ globals, sketch });
+
+      inspector.setState(state);
+      inspector.draw();
+
+      const bbox = canvasRef.current.getBoundingClientRect();
+
+      const onMouseMove = e => {
+        const meta = inspector.onHover(
+          e.clientX - bbox.left,
+          e.clientY - bbox.top
+        );
+
+        setHighlight(
+          meta ? { start: meta.lineStart - 2, end: meta.lineEnd - 1 } : null
+        );
+      };
+
+      canvasRef.current.addEventListener("mousemove", onMouseMove);
+
+      return () => {
+        canvasRef.current.removeEventListener("mousemove", onMouseMove);
+        setHighlight(null);
+      };
+    },
+    [isPlaying]
+  );
+
   return (
     <div className="w-100 h-100">
       <div className="mb2">
@@ -229,19 +268,6 @@ export const Sketch = ({ sketch, setHighlight }) => {
 
       <div className="relative">
         <canvas width={width} height={height} ref={canvasRef} />
-
-        {!isPlaying && (
-          <Inspector
-            state={stateHistory[historyIdx]}
-            globals={globals}
-            sketch={sketch}
-            onHover={e =>
-              setHighlight(
-                e ? { start: e.lineStart - 2, end: e.lineEnd - 1 } : null
-              )
-            }
-          />
-        )}
       </div>
 
       <div>
