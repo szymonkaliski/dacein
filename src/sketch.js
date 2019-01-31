@@ -13,7 +13,8 @@ const SketchControls = ({
   historyIdx,
   stateHistory,
   setIsPlaying,
-  setHistory
+  setHistory,
+  onReset
 }) => (
   <div>
     <button
@@ -29,6 +30,10 @@ const SketchControls = ({
       }}
     >
       {isPlaying ? "pause" : "play"}
+    </button>
+
+    <button className="f7 mr2" onClick={onReset}>
+      reset
     </button>
 
     <span className="f7 mr2 dib tc" style={{ width: 100 }}>
@@ -263,6 +268,14 @@ export const Sketch = ({ sketch, setHighlight }) => {
           isPlaying={isPlaying}
           setIsPlaying={setIsPlaying}
           stateHistory={stateHistory}
+          onReset={() =>
+            setHistory(draft => {
+              draft.stateHistory = [sketch.initialState || {}];
+
+              draft.eventsHistory = [[]];
+              draft.idx = 0;
+            })
+          }
         />
       </div>
 
