@@ -2,10 +2,15 @@ import React, { useEffect, useState } from "react";
 import { debounce } from "lodash";
 import { require } from "d3-require";
 
-import Panel from "./panel"
+import Panel from "./panel";
 import { Editor } from "./editor";
 import { Sketch } from "./sketch";
-import { addMeta, processRequire } from "./ast-transforms";
+import {
+  addMeta,
+  processRequire,
+  pullOutConstants,
+  replaceConstants
+} from "./ast-transforms";
 
 import "tachyons";
 import "./style.css";
@@ -13,27 +18,27 @@ import "./style.css";
 const TEST_SKETCH = `const _ = require("lodash");
 
 sketch({
-  setup: {
-    size: [600, 600]
-  },
+  size: [600, 600],
 
   initialState: {
     c: 0
   },
 
-  update: (state) => {
+  update: state => {
     state.c += 0.01;
 
     return state;
   },
 
   draw: state => {
-    const points = _.range(40).map((_, i) => [
-      Math.sin((state.c + i * 0.8) * 2.0) * 200 + 300,
-      Math.sin((state.c + i * 0.8) * 3.0) * 200 + 300
+    const n = 20;
+
+    const points = _.range(n).map((_, i) => [
+      Math.sin(i / n * Math.PI * 2.0) * 200 + 300,
+      Math.cos(i / n * Math.PI * 2.0) * 200 + 300
     ]);
 
-    const r = 8;
+    const r = 10;
 
     return [
       [
@@ -46,13 +51,15 @@ sketch({
       ]),
     ];
   }
-})`;
+});`;
 
 const COMPILE_DEBOUNCE_TIME = 16;
 
 export const App = () => {
   const [code, setCode] = useState(TEST_SKETCH);
+  const [codeConstants, setCodeConstants] = useState(null);
   const [sketch, setSketch] = useState(null);
+
   const [evalError, setEvalError] = useState(null);
   const [highlight, setHighlight] = useState(null);
 
@@ -64,30 +71,42 @@ export const App = () => {
 
       if (!window.sketch) {
         window.sketch = sketch => {
-          let isExecuting = true;
+          setSketch(sketch);
 
-          try {
-            sketch.draw(sketch.update(sketch.initialState || {}, []));
-          } catch (e) {
-            console.warn(e);
+          // let isExecuting = true;
 
-            isExecuting = false;
-            setEvalError({ msg: e.toString() });
-          }
+          // try {
+          //   sketch.draw(sketch.update(sketch.initialState || {}, []));
+          // } catch (e) {
+          //   console.warn(e);
 
-          if (isExecuting) {
-            setSketch(sketch);
-          }
+          //   isExecuting = false;
+          //   setEvalError({ msg: e.toString() });
+          // }
+
+          // if (isExecuting) {
+          //   setSketch(sketch);
+          // }
         };
       }
 
+      let codeConstants;
+
       try {
-        const processedCode = processRequire(addMeta(code));
+        const {
+          code: codeWithoutConstants,
+          constants: pulledOutConstants
+        } = pullOutConstants(code);
+
+        const codeWithMeta = addMeta(codeWithoutConstants);
+        const codeWithRequires = processRequire(codeWithMeta);
+
+        codeConstants = pulledOutConstants;
 
         eval(`
           const sketch = window.sketch;
 
-          ${processedCode}
+          ${codeWithRequires}
         `);
       } catch (e) {
         console.warn(e);
@@ -95,6 +114,8 @@ export const App = () => {
         const { line, column } = e;
         setEvalError({ msg: e.toString(), line, column });
       }
+
+      setCodeConstants(codeConstants);
 
       return () => {
         delete window.sketch;
@@ -119,7 +140,16 @@ export const App = () => {
       <Panel.Parent>
         <Panel.Child>
           <div className="w-100">
-            {sketch && <Sketch sketch={sketch} setHighlight={setHighlight} />}
+            {sketch && (
+              <Sketch
+                sketch={sketch}
+                constants={codeConstants}
+                setConstants={newConstants => {
+                  setCode(replaceConstants(code, newConstants));
+                }}
+                setHighlight={setHighlight}
+              />
+            )}
           </div>
         </Panel.Child>
 

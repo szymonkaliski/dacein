@@ -1,6 +1,6 @@
 import recast from "recast";
 import types from "ast-types";
-import { get } from "lodash";
+import { get, isNumber } from "lodash";
 
 import { COMMANDS } from "./commands";
 
@@ -152,4 +152,103 @@ export const processRequire = code => {
   `;
 
   return finalCode;
+};
+
+export const replaceConstants = (code, constants) => {
+  let idx = 0;
+
+  const ast = recast.parse(code);
+
+  types.visit(ast, {
+    visitProperty: function(path) {
+      if (path.value.key.name === "draw") {
+        this.traverse(path);
+      } else {
+        return false;
+      }
+    },
+
+    visitLiteral: function(path) {
+      if (isNumber(path.value.value)) {
+        if (constants && constants[idx]) {
+          const number = constants[idx];
+
+          path.value.value = number;
+          path.value.raw = `${number}`;
+
+          idx++;
+        }
+      }
+
+      this.traverse(path);
+    }
+  });
+
+  return recast.print(ast).code;
+};
+
+// TODO: return code and constants!
+export const pullOutConstants = code => {
+  const ast = recast.parse(code);
+
+  let idx = 0;
+  const pulledConstants = [];
+
+  types.visit(ast, {
+    visitProperty: function(path) {
+      if (path.value.key.name === "draw") {
+        this.traverse(path);
+      } else {
+        return false;
+      }
+    },
+
+    visitArrowFunctionExpression: function(path) {
+      if (get(path, "parentPath.value.key.name") === "draw") {
+        return Builders.arrowFunctionExpression(
+          [Builders.identifier("state"), Builders.identifier("__constants")],
+          path.value.body
+        );
+      }
+
+      this.traverse(path);
+    },
+
+    visitFunctionExpression: function(path) {
+      if (get(path, "parentPath.value.key.name") === "draw") {
+        return Builders.functionExpression(
+          null,
+          [Builders.identifier("state"), Builders.identifier("__constants")],
+          path.value.body
+        );
+      }
+
+      this.traverse(path);
+    },
+
+    visitLiteral: function(path) {
+      if (isNumber(path.value.value)) {
+        // protect from recursively updating in place
+        if (
+          get(path, ["parentPath", "value", "object", "name"]) === "__constants"
+        ) {
+          return false;
+        }
+
+        pulledConstants.push(path.value.value);
+
+        return Builders.memberExpression(
+          Builders.identifier("__constants"),
+          Builders.literal(idx++)
+        );
+      }
+
+      this.traverse(path);
+    }
+  });
+
+  return {
+    code: recast.print(ast).code,
+    constants: pulledConstants
+  };
 };

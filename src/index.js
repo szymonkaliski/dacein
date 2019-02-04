@@ -3,7 +3,7 @@ import ReactDOM from "react-dom";
 
 import { App } from "./app";
 
-const USE_CREATE_ROOT = false;
+const USE_CREATE_ROOT = true;
 
 if (USE_CREATE_ROOT) {
   const root = ReactDOM.createRoot(document.getElementById("root"));

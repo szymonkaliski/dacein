@@ -12,7 +12,7 @@ const decodeFromColor = hex => {
   return parseInt(`0x${hex}`);
 };
 
-export const makeInspector = ({ globals, sketch }) => {
+export const makeInspector = ({ sketch, globals, constants }) => {
   const canvas = document.createElement("canvas");
 
   canvas.width = globals.width;
@@ -28,7 +28,7 @@ export const makeInspector = ({ globals, sketch }) => {
   const draw = () => {
     let i = 0;
 
-    memo = sketch.draw(state);
+    memo = sketch.draw(state, constants);
 
     for (const operation of memo) {
       const [command, args] = operation;
@@ -51,12 +51,15 @@ export const makeInspector = ({ globals, sketch }) => {
     const hex = data.map(n => n.toString(16)).join("");
     const id = decodeFromColor(hex);
 
-    return get(memo, [id, 1, "__meta"]);
+    return id;
   };
+
+  const getMetaForId = id => get(memo, id);
 
   return {
     setState,
     draw,
-    onHover
+    onHover,
+    getMetaForId
   };
 };

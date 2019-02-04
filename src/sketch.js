@@ -4,6 +4,7 @@ import { get } from "lodash";
 
 import { COMMANDS } from "./commands";
 import { makeInspector } from "./inspector";
+import { optimise } from "./optimise";
 import { useImmer } from "./utils";
 
 const MAX_HISTORY_LEN = 100;
@@ -80,29 +81,19 @@ const SketchControls = ({
   </div>
 );
 
-export const Sketch = ({ sketch, setHighlight }) => {
-  const [
-    { stateHistory, eventsHistory, idx: historyIdx },
-    setHistory
-  ] = useImmer({
+export const Sketch = ({ sketch, constants, setConstants, setHighlight }) => {
+  const [{ stateHistory, idx: historyIdx }, setHistory] = useImmer({
     stateHistory: [sketch.initialState || {}],
     eventsHistory: [[]],
     idx: 0
   });
 
-  const [isPlaying, setIsPlaying] = useState(true);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [isOptimising, setIsOptimising] = useState(false);
   const canvasRef = useRef(null);
-  const [width, height] = get(sketch, ["setup", "size"], [800, 600]);
+  const [width, height] = get(sketch, "size", [800, 600]);
 
   const globals = { width, height };
-
-  useEffect(() => {
-    window.dumpHistory = () => ({ stateHistory, eventsHistory });
-
-    return () => {
-      delete window.dumpHistory();
-    };
-  });
 
   useEffect(() => {
     if (!canvasRef.current) {
@@ -166,7 +157,10 @@ export const Sketch = ({ sketch, setHighlight }) => {
     const ctx = canvasRef.current.getContext("2d");
 
     const step = () => {
-      for (const operation of sketch.draw(stateHistory[historyIdx])) {
+      for (const operation of sketch.draw(
+        stateHistory[historyIdx],
+        constants
+      )) {
         const [command, args] = operation;
 
         if (COMMANDS[command]) {
@@ -220,44 +214,92 @@ export const Sketch = ({ sketch, setHighlight }) => {
     };
   });
 
-  useEffect(
-    () => {
-      if (!canvasRef.current) {
-        return;
-      }
+  useEffect(() => {
+    if (!canvasRef.current) {
+      return;
+    }
 
-      if (isPlaying) {
-        return;
-      }
+    if (isPlaying) {
+      return;
+    }
 
-      const state = stateHistory[historyIdx];
-      const inspector = makeInspector({ globals, sketch });
+    const state = stateHistory[historyIdx];
+    const inspector = makeInspector({ sketch, globals, constants });
 
-      inspector.setState(state);
-      inspector.draw();
+    inspector.setState(state);
+    inspector.draw();
 
-      const bbox = canvasRef.current.getBoundingClientRect();
+    const bbox = canvasRef.current.getBoundingClientRect();
 
-      const onMouseMove = e => {
-        const meta = inspector.onHover(
-          e.clientX - bbox.left,
-          e.clientY - bbox.top
-        );
+    const onMouseDown = e => {
+      const [mx, my] = [e.clientX - bbox.left, e.clientY - bbox.top];
+      const id = inspector.onHover(mx, my);
+      const [command, args] = inspector.getMetaForId(id);
+
+      const optimiseArgs = {
+        id,
+        command,
+        args
+      };
+
+      setIsOptimising(optimiseArgs);
+    };
+
+    const onMouseUp = () => {
+      setIsOptimising(false);
+    };
+
+    const onMouseMove = e => {
+      const [mx, my] = [e.clientX - bbox.left, e.clientY - bbox.top];
+
+      if (!isOptimising) {
+        const id = inspector.onHover(mx, my);
+        const [command, args] = inspector.getMetaForId(id);
+        const meta = args.__meta;
 
         setHighlight(
           meta ? { start: meta.lineStart - 2, end: meta.lineEnd - 1 } : null
         );
-      };
+      }
 
-      canvasRef.current.addEventListener("mousemove", onMouseMove);
+      if (isOptimising) {
+        console.log({
+          ...isOptimising,
+          sketch,
+          state,
+          globals,
+          constants
+        });
 
-      return () => {
-        canvasRef.current.removeEventListener("mousemove", onMouseMove);
-        setHighlight(null);
-      };
-    },
-    [isPlaying]
-  );
+        const newConstants = optimise({
+          ...isOptimising,
+          sketch,
+          state,
+          globals,
+          constants,
+          target: [mx, my]
+        });
+
+        if (newConstants) {
+          setConstants(newConstants);
+        }
+      }
+    };
+
+    const onMouseOut = () => setHighlight(null);
+
+    canvasRef.current.addEventListener("mousemove", onMouseMove);
+    canvasRef.current.addEventListener("mousedown", onMouseDown);
+    canvasRef.current.addEventListener("mouseup", onMouseUp);
+    canvasRef.current.addEventListener("mouseout", onMouseOut);
+
+    return () => {
+      canvasRef.current.removeEventListener("mousemove", onMouseMove);
+      canvasRef.current.removeEventListener("mousedown", onMouseDown);
+      canvasRef.current.removeEventListener("mouseup", onMouseUp);
+      canvasRef.current.removeEventListener("mouseout", onMouseOut);
+    };
+  });
 
   return (
     <div className="w-100 h-100">
