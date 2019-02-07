@@ -5,7 +5,7 @@ import { get } from "lodash";
 import { COMMANDS } from "./commands";
 import { makeInspector } from "./inspector";
 import { optimise } from "./optimise";
-import { useImmer } from "./utils";
+import { useImmer } from "./hooks";
 
 const MAX_HISTORY_LEN = 100;
 
@@ -91,6 +91,7 @@ export const Sketch = ({ sketch, constants, setConstants, setHighlight }) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isOptimising, setIsOptimising] = useState(false);
   const canvasRef = useRef(null);
+
   const [width, height] = get(sketch, "size", [800, 600]);
 
   const globals = { width, height };
@@ -254,7 +255,7 @@ export const Sketch = ({ sketch, constants, setConstants, setHighlight }) => {
 
       if (!isOptimising) {
         const id = inspector.onHover(mx, my);
-        const [command, args] = inspector.getMetaForId(id);
+        const args = inspector.getMetaForId(id)[1];
         const meta = args.__meta;
 
         setHighlight(
@@ -263,13 +264,13 @@ export const Sketch = ({ sketch, constants, setConstants, setHighlight }) => {
       }
 
       if (isOptimising) {
-        console.log({
-          ...isOptimising,
-          sketch,
-          state,
-          globals,
-          constants
-        });
+        // console.log({
+        //   ...isOptimising,
+        //   sketch,
+        //   state,
+        //   globals,
+        //   constants
+        // });
 
         const newConstants = optimise({
           ...isOptimising,
@@ -313,7 +314,6 @@ export const Sketch = ({ sketch, constants, setConstants, setHighlight }) => {
           onReset={() =>
             setHistory(draft => {
               draft.stateHistory = [sketch.initialState || {}];
-
               draft.eventsHistory = [[]];
               draft.idx = 0;
             })

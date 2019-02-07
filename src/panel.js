@@ -5,7 +5,7 @@ const Parent = ({ children }) => {
   const ref = useRef(null);
   const size = useComponentSize(ref);
   const [isDragging, setIsDragging] = useState(false);
-  const [div, setDiv] = useState(0.5);
+  const [divider, setDivider] = useState(0.5);
 
   useEffect(
     () => {
@@ -22,7 +22,7 @@ const Parent = ({ children }) => {
           return;
         }
 
-        setDiv((e.clientX - bbox.left) / size.width);
+        setDivider((e.clientX - bbox.left) / size.width);
       };
 
       const onMouseUp = () => {
@@ -50,7 +50,7 @@ const Parent = ({ children }) => {
 
   return (
     <div className="h-100 flex" ref={ref}>
-      <div style={{ width: size.width * div - dividerSize / 2 }}>
+      <div style={{ width: size.width * divider - dividerSize / 2 }}>
         {children[0]}
       </div>
 
@@ -74,7 +74,7 @@ const Parent = ({ children }) => {
         />
       </div>
 
-      <div style={{ width: size.width * (1 - div) - dividerSize / 2 }}>
+      <div style={{ width: size.width * (1 - divider) - dividerSize / 2 }}>
         {children[1]}
       </div>
     </div>

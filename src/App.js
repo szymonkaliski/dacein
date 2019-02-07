@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from "react";
-import { debounce } from "lodash";
 import { require } from "d3-require";
 
 import Panel from "./panel";
@@ -53,45 +52,21 @@ sketch({
   }
 });`;
 
-const COMPILE_DEBOUNCE_TIME = 16;
-
 export const App = () => {
   const [code, setCode] = useState(TEST_SKETCH);
-  const [codeConstants, setCodeConstants] = useState(null);
+  const [constants, setConstants] = useState(null);
   const [sketch, setSketch] = useState(null);
-
-  const [evalError, setEvalError] = useState(null);
+  const [errors, setErrors] = useState(null);
   const [highlight, setHighlight] = useState(null);
 
   useEffect(
-    debounce(() => {
-      if (!window.require) {
-        window.require = require;
-      }
+    () => {
+      window.require = require;
+      window.sketch = sketch => setSketch(sketch);
 
-      if (!window.sketch) {
-        window.sketch = sketch => {
-          setSketch(sketch);
+      let pulledConstants, finalCode, hasErrors;
 
-          // let isExecuting = true;
-
-          // try {
-          //   sketch.draw(sketch.update(sketch.initialState || {}, []));
-          // } catch (e) {
-          //   console.warn(e);
-
-          //   isExecuting = false;
-          //   setEvalError({ msg: e.toString() });
-          // }
-
-          // if (isExecuting) {
-          //   setSketch(sketch);
-          // }
-        };
-      }
-
-      let codeConstants;
-
+      // ast
       try {
         const {
           code: codeWithoutConstants,
@@ -101,35 +76,43 @@ export const App = () => {
         const codeWithMeta = addMeta(codeWithoutConstants);
         const codeWithRequires = processRequire(codeWithMeta);
 
-        codeConstants = pulledOutConstants;
+        pulledConstants = pulledOutConstants;
+        finalCode = codeWithRequires;
+      } catch (e) {
+        console.warn(e);
 
+        hasErrors = true;
+        const { line, column } = e;
+        setErrors([...errors, { msg: e.toString(), line, column }]);
+      }
+
+      if (!finalCode) {
+        return;
+      }
+
+      // eval
+      try {
         eval(`
           const sketch = window.sketch;
-
-          ${codeWithRequires}
+          ${finalCode}
         `);
       } catch (e) {
         console.warn(e);
 
+        hasErrors = true;
         const { line, column } = e;
-        setEvalError({ msg: e.toString(), line, column });
+        setErrors([...errors, { msg: e.toString(), line, column }]);
       }
 
-      setCodeConstants(codeConstants);
+      if (!hasErrors) {
+        setErrors([]);
+      }
+
+      setConstants(pulledConstants);
 
       return () => {
         delete window.sketch;
-      };
-    }, COMPILE_DEBOUNCE_TIME),
-    [code]
-  );
-
-  useEffect(
-    () => {
-      window.dumpCode = () => console.log(code);
-
-      return () => {
-        delete window.dumpCode;
+        delete window.require;
       };
     },
     [code]
@@ -143,10 +126,10 @@ export const App = () => {
             {sketch && (
               <Sketch
                 sketch={sketch}
-                constants={codeConstants}
-                setConstants={newConstants => {
-                  setCode(replaceConstants(code, newConstants));
-                }}
+                constants={constants}
+                setConstants={newConstants =>
+                  setCode(replaceConstants(code, newConstants))
+                }
                 setHighlight={setHighlight}
               />
             )}
@@ -158,7 +141,6 @@ export const App = () => {
             <Editor
               code={code}
               onChange={e => setCode(e)}
-              evalError={evalError}
               highlight={highlight}
             />
           </div>

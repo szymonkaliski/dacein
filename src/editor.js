@@ -1,6 +1,7 @@
+import OutsideClickHandler from "react-outside-click-handler";
 import React, { useState, useEffect, useRef } from "react";
-import { Controlled as CodeMirror } from "react-codemirror2";
 import { ChromePicker } from "react-color";
+import { Controlled as CodeMirror } from "react-codemirror2";
 
 import "codemirror/lib/codemirror.css";
 import "./codemirror-base16-grayscale-dark.css";
@@ -45,7 +46,7 @@ const stringifyColorFormat = (v, format) => {
 };
 
 const NumberPicker = ({ value, coords, onChange }) => {
-  const [tmpValue, setTmpValue] = useState(value);
+  const [draftValue, setDraftValue] = useState(value);
 
   const exp = Math.round(Math.log10(Math.abs(value)));
 
@@ -60,12 +61,12 @@ const NumberPicker = ({ value, coords, onChange }) => {
     >
       <input
         type="range"
-        value={tmpValue}
+        value={draftValue}
         min={min}
         max={max}
         step={step}
         onChange={e => {
-          setTmpValue(e.target.value);
+          setDraftValue(e.target.value);
           onChange(`${e.target.value}`);
         }}
       />
@@ -74,18 +75,19 @@ const NumberPicker = ({ value, coords, onChange }) => {
 };
 
 const ColorPicker = ({ value, coords, onChange }) => {
-  const [tmpValue, setTmpValue] = useState(value.replace(/"/g, ""));
+  const [draftValue, setDraftValue] = useState(value.replace(/"/g, ""));
+
   const format = getColorFormat(value);
 
   return (
     <div
       className="absolute pa1 bg-light-gray"
-      style={{ top: coords.top - 300, left: coords.left, zIndex: 10 }}
+      style={{ top: coords.top - 260, left: coords.left, zIndex: 10 }}
     >
       <ChromePicker
-        color={tmpValue}
+        color={draftValue}
         onChange={e => {
-          setTmpValue(e[format]);
+          setDraftValue(e[format]);
           onChange(stringifyColorFormat(e, format));
         }}
       />
@@ -105,17 +107,19 @@ const Picker = ({ type, coords, value, onChange }) => {
   return null;
 };
 
-export const Editor = ({ code, highlight, onChange, evalError }) => {
+export const Editor = ({ code, highlight, onChange }) => {
   const [picker, setPicker] = useState(null);
-  const [tmpLength, setTmpLength] = useState(0);
-  const [tmpCode, setTmpCode] = useState(code);
-  const [tmpMarker, setTmpMarker] = useState(null);
-  const instance = useRef(null);
+  const [editorCode, setEditorCode] = useState(null);
 
+  const instance = useRef(null);
+  const tokenLength = useRef(null);
+  const highlightMarker = useRef(null);
+
+  // FIXME
   useEffect(
     () => {
-      if (code !== tmpCode) {
-        setTmpCode(code);
+      if (code !== editorCode) {
+        setEditorCode(code);
       }
     },
     [code]
@@ -127,27 +131,24 @@ export const Editor = ({ code, highlight, onChange, evalError }) => {
         return;
       }
 
-      if (tmpMarker) {
-        tmpMarker.clear();
-        setTmpMarker(null);
-      }
+      const clearMarker = () => {
+        if (highlightMarker.current) {
+          highlightMarker.current.clear();
+          highlightMarker.current = null;
+        }
+      };
+
+      clearMarker();
 
       if (highlight) {
-        setTmpMarker(
-          instance.current.markText(
-            { line: highlight.start },
-            { line: highlight.end },
-            { className: "inspector-highlight" }
-          )
+        highlightMarker.current = instance.current.markText(
+          { line: highlight.start },
+          { line: highlight.end },
+          { className: "inspector-highlight" }
         );
       }
 
-      return () => {
-        if (tmpMarker) {
-          tmpMarker.clear();
-          setTmpMarker(null);
-        }
-      };
+      return clearMarker;
     },
     [instance, highlight]
   );
@@ -156,23 +157,22 @@ export const Editor = ({ code, highlight, onChange, evalError }) => {
     <div className="relative">
       <CodeMirror
         editorDidMount={e => (instance.current = e)}
-        value={tmpCode}
-        onBeforeChange={(editor, data, value) => {
-          setTmpCode(value);
-        }}
-        onChange={(editor, data, value) => {
-          onChange(value);
-        }}
+        value={editorCode}
+        onBeforeChange={(editor, data, value) => setEditorCode(value)}
+        onChange={(editor, data, value) => onChange(value)}
         onCursor={e => {
           const cursor = e.getCursor();
           const token = e.getTokenAt(cursor);
-          const coords = e.cursorCoords(true, "local");
+          const coords = e.charCoords(
+            { line: cursor.line, ch: token.start },
+            "local"
+          );
 
           if (!token.type) {
             return;
           }
 
-          setTmpLength(token.string.length);
+          tokenLength.current = token.string.length;
 
           setPicker({
             key: `${token.type}-${token.string}`,
@@ -194,33 +194,35 @@ export const Editor = ({ code, highlight, onChange, evalError }) => {
       />
 
       {picker && (
-        <Picker
-          key={picker.key}
-          type={picker.type}
-          coords={picker.coords}
-          value={picker.value}
-          onChange={value => {
-            const { start, line } = picker.text;
+        <OutsideClickHandler onOutsideClick={() => setPicker(null)}>
+          <Picker
+            key={picker.key}
+            type={picker.type}
+            coords={picker.coords}
+            value={picker.value}
+            onChange={value => {
+              const { start, line } = picker.text;
 
-            const newCode = code
-              .split("\n")
-              .map((codeLine, i) => {
-                if (i !== line) {
-                  return codeLine;
-                }
+              const newCode = code
+                .split("\n")
+                .map((codeLine, i) => {
+                  if (i !== line) {
+                    return codeLine;
+                  }
 
-                return (
-                  codeLine.substr(0, start) +
-                  value +
-                  codeLine.substr(start + tmpLength)
-                );
-              })
-              .join("\n");
+                  return (
+                    codeLine.substr(0, start) +
+                    value +
+                    codeLine.substr(start + tokenLength.current)
+                  );
+                })
+                .join("\n");
 
-            setTmpLength(`${value}`.length);
-            setTmpCode(newCode);
-          }}
-        />
+              tokenLength.current = `${value}`.length;
+              setEditorCode(newCode);
+            }}
+          />
+        </OutsideClickHandler>
       )}
     </div>
   );
