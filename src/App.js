@@ -3,7 +3,9 @@ import { require } from "d3-require";
 
 import Panel from "./panel";
 import { Editor } from "./editor";
+import { Errors } from "./errors";
 import { Sketch } from "./sketch";
+
 import {
   addMeta,
   processRequire,
@@ -82,8 +84,7 @@ export const App = () => {
         console.warn(e);
 
         hasErrors = true;
-        const { line, column } = e;
-        setErrors([...errors, { msg: e.toString(), line, column }]);
+        setErrors([...errors, e.description]);
       }
 
       if (!finalCode) {
@@ -100,8 +101,7 @@ export const App = () => {
         console.warn(e);
 
         hasErrors = true;
-        const { line, column } = e;
-        setErrors([...errors, { msg: e.toString(), line, column }]);
+        setErrors([...errors, e.description]);
       }
 
       if (!hasErrors) {
@@ -143,6 +143,8 @@ export const App = () => {
               onChange={e => setCode(e)}
               highlight={highlight}
             />
+
+            <Errors errors={errors} />
           </div>
         </Panel.Child>
       </Panel.Parent>
