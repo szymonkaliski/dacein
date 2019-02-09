@@ -1,11 +1,16 @@
 import React, { useRef, useState, useEffect } from "react";
 import useComponentSize from "@rehooks/component-size";
 
-const Parent = ({ children }) => {
+export const DIRECTION = {
+  HORIZONTAL: "HORIZONTAL",
+  VERTICAL: "VERTICAL"
+};
+
+const Parent = ({ children, direction = DIRECTION.HORIZONTAL, defaultDivide = 0.5 }) => {
   const ref = useRef(null);
   const size = useComponentSize(ref);
   const [isDragging, setIsDragging] = useState(false);
-  const [divider, setDivider] = useState(0.5);
+  const [divider, setDivider] = useState(defaultDivide);
 
   useEffect(
     () => {
@@ -18,11 +23,19 @@ const Parent = ({ children }) => {
       const onMouseMove = e => {
         e.preventDefault();
 
-        if (e.clientX === 0) {
-          return;
-        }
+        if (direction === DIRECTION.HORIZONTAL) {
+          if (e.clientX === 0) {
+            return;
+          }
 
-        setDivider((e.clientX - bbox.left) / size.width);
+          setDivider((e.clientX - bbox.left) / size.width);
+        } else {
+          if (e.clientY === 0) {
+            return;
+          }
+
+          setDivider((e.clientY - bbox.top) / size.height);
+        }
       };
 
       const onMouseUp = () => {
@@ -42,47 +55,59 @@ const Parent = ({ children }) => {
         window.removeEventListener("mouseup", onMouseUp);
       };
     },
-    [isDragging]
+    [isDragging, direction, ref]
   );
 
   const dividerSize = 10;
-  const handleSize = 1;
+  const handleSize = 2;
+
+  const styles =
+    direction === DIRECTION.HORIZONTAL
+      ? [
+          { width: size.width * divider - dividerSize / 2 },
+          { width: size.width * (1 - divider) - dividerSize / 2 }
+        ]
+      : [
+          { height: size.height * divider - dividerSize / 2 },
+          { height: size.height * (1 - divider) - dividerSize / 2 }
+        ];
+
+  const handleWrapperStyle =
+    direction === DIRECTION.HORIZONTAL
+      ? { width: dividerSize, cursor: "ew-resize" }
+      : { height: dividerSize, cursor: "ns-resize" };
+
+  const handleStyle =
+    direction === DIRECTION.HORIZONTAL
+      ? { width: handleSize, marginLeft: (dividerSize - handleSize) / 2 }
+      : { height: handleSize, marginTop: (dividerSize - handleSize) / 2 };
+
+  const baseClassName = direction === DIRECTION.HORIZONTAL ? "h-100" : "w-100 h-100";
+  const wrapperClassName =
+    direction === DIRECTION.HORIZONTAL ? "flex" : "flex flex-column";
 
   return (
-    <div className="h-100 flex" ref={ref}>
-      <div style={{ width: size.width * divider - dividerSize / 2 }}>
-        {children[0]}
-      </div>
+    <div className={`${baseClassName} ${wrapperClassName}`} ref={ref}>
+      <div style={styles[0]}>{children[0]}</div>
 
       <div
-        className="h-100"
+        className={baseClassName}
         onMouseDown={e => {
           e.preventDefault();
           setIsDragging(true);
         }}
-        style={{
-          width: dividerSize,
-          cursor: "ew-resize"
-        }}
+        style={handleWrapperStyle}
       >
-        <div
-          className="bg-gray h-100"
-          style={{
-            width: handleSize,
-            marginLeft: (dividerSize - handleSize) / 2
-          }}
-        />
+        <div className={`${baseClassName} bg-gray`} style={handleStyle} />
       </div>
 
-      <div style={{ width: size.width * (1 - divider) - dividerSize / 2 }}>
-        {children[1]}
-      </div>
+      <div style={styles[1]}>{children[1]}</div>
     </div>
   );
 };
 
-const Child = ({ children }) => (
-  <div className="overflow-hidden">{children}</div>
+const Child = ({ children, className }) => (
+  <div className={`overflow-hidden h-100 ${className}`}>{children}</div>
 );
 
 export default { Parent, Child };

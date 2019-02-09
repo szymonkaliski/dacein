@@ -1,5 +1,5 @@
 .CodeMirror {
-  height: auto !important;
+  height: 100vh !important;
   font-family: Consolas, monaco, monospace;
   font-size: 0.875rem;
 }
@@ -11,4 +11,8 @@
 
 .inspector-highlight {
   background: #252525;
+}
+
+.bg-custom-dark  {
+  background: #101010;
 }

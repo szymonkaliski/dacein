@@ -63,10 +63,25 @@ export const App = () => {
 
   useEffect(
     () => {
-      window.require = require;
-      window.sketch = sketch => setSketch(sketch);
+      let tmpErrors = [];
+      let pulledConstants = null;
+      let finalCode = null;
 
-      let pulledConstants, finalCode, hasErrors;
+      window.require = require;
+      window.sketch = sketch => {
+        try {
+          sketch.draw(sketch.initialState, pulledConstants);
+        } catch (e) {
+          console.warn(e);
+          tmpErrors.push(e.description);
+        }
+
+        if (tmpErrors.length > 0) {
+          setErrors(tmpErrors);
+        } else {
+          setSketch(sketch);
+        }
+      };
 
       // ast
       try {
@@ -82,33 +97,27 @@ export const App = () => {
         finalCode = codeWithRequires;
       } catch (e) {
         console.warn(e);
-
-        hasErrors = true;
-        setErrors([...errors, e.description]);
+        tmpErrors.push(e.description);
       }
 
-      if (!finalCode) {
-        return;
+      if (pulledConstants) {
+        setConstants(pulledConstants);
       }
 
-      // eval
-      try {
-        eval(`
-          const sketch = window.sketch;
-          ${finalCode}
-        `);
-      } catch (e) {
-        console.warn(e);
-
-        hasErrors = true;
-        setErrors([...errors, e.description]);
+      // eval only if we have something worth evaling
+      if (finalCode) {
+        try {
+          eval(`
+            const sketch = window.sketch;
+            ${finalCode}
+          `);
+        } catch (e) {
+          console.warn(e);
+          tmpErrors.push(e.description);
+        }
       }
 
-      if (!hasErrors) {
-        setErrors([]);
-      }
-
-      setConstants(pulledConstants);
+      setErrors(tmpErrors);
 
       return () => {
         delete window.sketch;
@@ -119,7 +128,7 @@ export const App = () => {
   );
 
   return (
-    <div className="sans-serif vh-100 bg-dark-gray near-white">
+    <div className="sans-serif vh-100 bg-custom-dark near-white">
       <Panel.Parent>
         <Panel.Child>
           <div className="w-100">

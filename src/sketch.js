@@ -2,6 +2,7 @@ import JSON from "react-json-view";
 import React, { useEffect, useState, useRef } from "react";
 import { get } from "lodash";
 
+import Panel, { DIRECTION } from "./panel";
 import { COMMANDS } from "./commands";
 import { makeInspector } from "./inspector";
 import { optimise } from "./optimise";
@@ -225,7 +226,10 @@ export const Sketch = ({ sketch, constants, setConstants, setHighlight }) => {
     }
 
     const state = stateHistory[historyIdx];
+
+    // TODO: make inspector into a const ref!
     const inspector = makeInspector({ sketch, globals, constants });
+    console.log("NEW INSPECTOR")
 
     inspector.setState(state);
     inspector.draw();
@@ -303,7 +307,7 @@ export const Sketch = ({ sketch, constants, setConstants, setHighlight }) => {
   });
 
   return (
-    <div className="w-100 h-100">
+    <div className="w-100 vh-100">
       <div className="mb2">
         <SketchControls
           setHistory={setHistory}
@@ -321,19 +325,28 @@ export const Sketch = ({ sketch, constants, setConstants, setHighlight }) => {
         />
       </div>
 
-      <div className="relative">
-        <canvas width={width} height={height} ref={canvasRef} />
-      </div>
+      <div className="h-100">
+        <Panel.Parent direction={DIRECTION.VERTICAL} defaultDivide={0.8}>
+          <Panel.Child className="flex justify-center items-center">
+            <div className="relative">
+              <canvas width={width} height={height} ref={canvasRef} />
+            </div>
+          </Panel.Child>
 
-      <div>
-        <JSON
-          src={stateHistory[historyIdx]}
-          enableClipboard={false}
-          displayDataTypes={false}
-          displayObjectSize={false}
-          indentWidth={2}
-          theme="grayscale"
-        />
+          <Panel.Child>
+            <div className="pa2">
+              <JSON
+                src={stateHistory[historyIdx]}
+                name="state"
+                enableClipboard={false}
+                displayDataTypes={false}
+                displayObjectSize={false}
+                indentWidth={2}
+                theme="grayscale"
+              />
+            </div>
+          </Panel.Child>
+        </Panel.Parent>
       </div>
     </div>
   );
