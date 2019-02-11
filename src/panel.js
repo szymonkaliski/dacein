@@ -6,7 +6,11 @@ export const DIRECTION = {
   VERTICAL: "VERTICAL"
 };
 
-const Parent = ({ children, direction = DIRECTION.HORIZONTAL, defaultDivide = 0.5 }) => {
+export const Panel = ({
+  children,
+  direction = DIRECTION.HORIZONTAL,
+  defaultDivide = 0.5
+}) => {
   const ref = useRef(null);
   const size = useComponentSize(ref);
   const [isDragging, setIsDragging] = useState(false);
@@ -58,8 +62,10 @@ const Parent = ({ children, direction = DIRECTION.HORIZONTAL, defaultDivide = 0.
     [isDragging, direction, ref]
   );
 
+  console.log({ divider });
+
   const dividerSize = 10;
-  const handleSize = 2;
+  const handleSize = 1;
 
   const styles =
     direction === DIRECTION.HORIZONTAL
@@ -82,32 +88,29 @@ const Parent = ({ children, direction = DIRECTION.HORIZONTAL, defaultDivide = 0.
       ? { width: handleSize, marginLeft: (dividerSize - handleSize) / 2 }
       : { height: handleSize, marginTop: (dividerSize - handleSize) / 2 };
 
-  const baseClassName = direction === DIRECTION.HORIZONTAL ? "h-100" : "w-100 h-100";
   const wrapperClassName =
     direction === DIRECTION.HORIZONTAL ? "flex" : "flex flex-column";
 
   return (
-    <div className={`${baseClassName} ${wrapperClassName}`} ref={ref}>
-      <div style={styles[0]}>{children[0]}</div>
+    <div className={`h-100 ${wrapperClassName}`} ref={ref}>
+      <div style={styles[0]} className="overflow-hidden">
+        {children[0]}
+      </div>
 
       <div
-        className={baseClassName}
+        className="h-100"
         onMouseDown={e => {
           e.preventDefault();
           setIsDragging(true);
         }}
         style={handleWrapperStyle}
       >
-        <div className={`${baseClassName} bg-gray`} style={handleStyle} />
+        <div className="h-100 bg-gray" style={handleStyle} />
       </div>
 
-      <div style={styles[1]}>{children[1]}</div>
+      <div style={styles[1]} className="overflow-hidden">
+        {children[1]}
+      </div>
     </div>
   );
 };
-
-const Child = ({ children, className }) => (
-  <div className={`overflow-hidden h-100 ${className}`}>{children}</div>
-);
-
-export default { Parent, Child };

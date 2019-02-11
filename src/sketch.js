@@ -2,8 +2,8 @@ import JSON from "react-json-view";
 import React, { useEffect, useState, useRef } from "react";
 import { get } from "lodash";
 
-import Panel, { DIRECTION } from "./panel";
 import { COMMANDS } from "./commands";
+import { Panel, DIRECTION } from "./panel";
 import { makeInspector } from "./inspector";
 import { optimise } from "./optimise";
 import { useImmer } from "./hooks";
@@ -229,7 +229,7 @@ export const Sketch = ({ sketch, constants, setConstants, setHighlight }) => {
 
     // TODO: make inspector into a const ref!
     const inspector = makeInspector({ sketch, globals, constants });
-    console.log("NEW INSPECTOR")
+    console.log("NEW INSPECTOR");
 
     inspector.setState(state);
     inspector.draw();
@@ -307,46 +307,42 @@ export const Sketch = ({ sketch, constants, setConstants, setHighlight }) => {
   });
 
   return (
-    <div className="w-100 vh-100">
-      <div className="mb2">
-        <SketchControls
-          setHistory={setHistory}
-          historyIdx={historyIdx}
-          isPlaying={isPlaying}
-          setIsPlaying={setIsPlaying}
-          stateHistory={stateHistory}
-          onReset={() =>
-            setHistory(draft => {
-              draft.stateHistory = [sketch.initialState || {}];
-              draft.eventsHistory = [[]];
-              draft.idx = 0;
-            })
-          }
-        />
-      </div>
+    <div className="w-100 h-100">
+      {/* <div className="mb2"> */}
+      {/*   <SketchControls */}
+      {/*     setHistory={setHistory} */}
+      {/*     historyIdx={historyIdx} */}
+      {/*     isPlaying={isPlaying} */}
+      {/*     setIsPlaying={setIsPlaying} */}
+      {/*     stateHistory={stateHistory} */}
+      {/*     onReset={() => */}
+      {/*       setHistory(draft => { */}
+      {/*         draft.stateHistory = [sketch.initialState || {}]; */}
+      {/*         draft.eventsHistory = [[]]; */}
+      {/*         draft.idx = 0; */}
+      {/*       }) */}
+      {/*     } */}
+      {/*   /> */}
+      {/* </div> */}
 
       <div className="h-100">
-        <Panel.Parent direction={DIRECTION.VERTICAL} defaultDivide={0.8}>
-          <Panel.Child className="flex justify-center items-center">
-            <div className="relative">
-              <canvas width={width} height={height} ref={canvasRef} />
-            </div>
-          </Panel.Child>
+        <Panel direction={DIRECTION.VERTICAL} defaultDivide={0.8}>
+          <div className="flex justify-center items-center relative h-100">
+            <canvas width={width} height={height} ref={canvasRef} />
+          </div>
 
-          <Panel.Child>
-            <div className="pa2">
-              <JSON
-                src={stateHistory[historyIdx]}
-                name="state"
-                enableClipboard={false}
-                displayDataTypes={false}
-                displayObjectSize={false}
-                indentWidth={2}
-                theme="grayscale"
-              />
-            </div>
-          </Panel.Child>
-        </Panel.Parent>
+          <div className="pa2">
+            <JSON
+              src={stateHistory[historyIdx]}
+              name="state"
+              enableClipboard={false}
+              displayDataTypes={false}
+              displayObjectSize={false}
+              indentWidth={2}
+              theme="grayscale"
+            />
+          </div>
+        </Panel>
       </div>
     </div>
   );

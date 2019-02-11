@@ -1,12 +1,12 @@
 .CodeMirror {
-  height: 100vh !important;
-  font-family: Consolas, monaco, monospace;
-  font-size: 0.875rem;
+  height: 100% !important;
+  font-family: Consolas, monaco, monospace !important;
+  font-size: 0.75rem;
 }
 
 .react-json-view {
   font-family: Consolas, monaco, monospace !important;
-  font-size: 0.875rem !important;
+  font-size: 0.75rem !important;
 }
 
 .inspector-highlight {
@@ -15,4 +15,8 @@
 
 .bg-custom-dark  {
   background: #101010;
+}
+
+.custom-dark  {
+  color: #101010;
 }

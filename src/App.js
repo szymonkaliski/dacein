@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from "react";
 import { require } from "d3-require";
 
-import Panel from "./panel";
 import { Editor } from "./editor";
 import { Errors } from "./errors";
+import { Panel } from "./panel";
 import { Sketch } from "./sketch";
+import { Topbar } from "./topbar";
 
 import {
   addMeta,
@@ -128,35 +129,35 @@ export const App = () => {
   );
 
   return (
-    <div className="sans-serif vh-100 bg-custom-dark near-white">
-      <Panel.Parent>
-        <Panel.Child>
-          <div className="w-100">
-            {sketch && (
-              <Sketch
-                sketch={sketch}
-                constants={constants}
-                setConstants={newConstants =>
-                  setCode(replaceConstants(code, newConstants))
-                }
-                setHighlight={setHighlight}
-              />
-            )}
-          </div>
-        </Panel.Child>
+    <div className="code vh-100 bg-custom-dark near-white flex flex-column">
+      <div>
+        <Topbar />
+      </div>
 
-        <Panel.Child>
-          <div className="w-100">
-            <Editor
-              code={code}
-              onChange={e => setCode(e)}
-              highlight={highlight}
+      <Panel>
+        <div className="h-100">
+          {sketch && (
+            <Sketch
+              sketch={sketch}
+              constants={constants}
+              setConstants={newConstants =>
+                setCode(replaceConstants(code, newConstants))
+              }
+              setHighlight={setHighlight}
             />
+          )}
+        </div>
 
-            <Errors errors={errors} />
-          </div>
-        </Panel.Child>
-      </Panel.Parent>
+        <div>
+          <Editor
+            code={code}
+            onChange={e => setCode(e)}
+            highlight={highlight}
+          />
+
+          <Errors errors={errors} />
+        </div>
+      </Panel>
     </div>
   );
 };
