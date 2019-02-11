@@ -62,8 +62,6 @@ export const Panel = ({
     [isDragging, direction, ref]
   );
 
-  console.log({ divider });
-
   const dividerSize = 10;
   const handleSize = 1;
 

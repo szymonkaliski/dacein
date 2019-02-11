@@ -131,7 +131,7 @@ export const App = () => {
   return (
     <div className="code vh-100 bg-custom-dark near-white flex flex-column">
       <div>
-        <Topbar />
+        <Topbar setCode={setCode} code={code} />
       </div>
 
       <Panel>
