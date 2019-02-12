@@ -1,5 +1,6 @@
 import JSON from "react-json-view";
 import React, { useEffect, useState, useRef } from "react";
+import useComponentSize from "@rehooks/component-size";
 import { get } from "lodash";
 
 import { COMMANDS } from "./commands";
@@ -10,6 +11,95 @@ import { useImmer } from "./hooks";
 
 const MAX_HISTORY_LEN = 100;
 
+const clamp = (v, min, max) => Math.max(min, Math.min(v, max));
+
+const RoundButton = ({ onClick, children }) => (
+  <div className="dib">
+    <button
+      className="mr2 custom-dark bg-gray br-pill bn lh-solid dt dim pointer"
+      style={{ height: 26, width: 26 }}
+      onClick={onClick}
+    >
+      <div className="dtc v-mid tc" style={{ fontSize: 12, width: 26 }}>
+        {children}
+      </div>
+    </button>
+  </div>
+);
+
+const Slider = ({ disabled, position, onDrag, height = 10 }) => {
+  const ref = useRef(null);
+  const size = useComponentSize(ref);
+  const [isDragging, setIsDragging] = useState(false);
+
+  const scale = (val, inputMin, inputMax, outputMin, outputMax) => {
+    return (
+      (outputMax - outputMin) * ((val - inputMin) / (inputMax - inputMin)) +
+      outputMin
+    );
+  };
+
+  useEffect(() => {
+    if (!ref) {
+      return;
+    }
+
+    if (disabled) {
+      return;
+    }
+
+    const bbox = ref.current.getBoundingClientRect();
+
+    const onMouseMove = e => {
+      e.preventDefault();
+
+      if (e.clientX === 0) {
+        return;
+      }
+
+      onDrag((e.clientX - bbox.left) / size.width);
+    };
+
+    const onMouseUp = () => {
+      window.removeEventListener("mousemove", onMouseMove);
+      window.removeEventListener("mouseup", onMouseUp);
+
+      setIsDragging(false);
+    };
+
+    if (isDragging !== false) {
+      window.addEventListener("mousemove", onMouseMove);
+      window.addEventListener("mouseup", onMouseUp);
+    }
+
+    return () => {
+      window.removeEventListener("mousemove", onMouseMove);
+      window.removeEventListener("mouseup", onMouseUp);
+    };
+  });
+
+  const left = scale(position, 0, 1, 1, size.width - 1 - height);
+
+  return (
+    <div ref={ref} className="w-100 bg-gray relative br3" style={{ height }}>
+      <div
+        className="bg-custom-dark br-pill absolute dim"
+        style={{
+          height: height - 2,
+          width: height - 2,
+          top: 1,
+          left: `${left}px`,
+          cursor: "ew-resize"
+        }}
+        onMouseDown={e => {
+          e.preventDefault();
+          setIsDragging(true);
+        }}
+      />
+    </div>
+  );
+};
+
 const SketchControls = ({
   isPlaying,
   historyIdx,
@@ -18,9 +108,8 @@ const SketchControls = ({
   setHistory,
   onReset
 }) => (
-  <div>
-    <button
-      className="f7 mr2"
+  <div className="pa2 flex items-center">
+    <RoundButton
       onClick={() => {
         if (!isPlaying) {
           setHistory(draft => {
@@ -31,54 +120,28 @@ const SketchControls = ({
         setIsPlaying(!isPlaying);
       }}
     >
-      {isPlaying ? "pause" : "play"}
-    </button>
+      {isPlaying ? "❚❚" : "▶︎"}
+    </RoundButton>
 
-    <button className="f7 mr2" onClick={onReset}>
-      reset
-    </button>
+    <RoundButton onClick={onReset}>
+      <span style={{ fontSize: 14 }}>◼</span>
+    </RoundButton>
 
-    <span className="f7 mr2 dib tc" style={{ width: 100 }}>
-      {historyIdx} / {stateHistory.length - 1}
-    </span>
-
-    <button
-      className="f7 mr2"
-      onClick={() =>
-        setHistory(draft => {
-          draft.idx = Math.max(draft.idx - 1, 0);
-        })
-      }
-    >
-      {"<<"}
-    </button>
-
-    <input
-      className="mr2"
-      type="range"
-      min={0}
-      max={stateHistory.length - 1}
-      step={1}
-      value={historyIdx}
-      onChange={e => {
-        const { value } = e.target;
-
-        setHistory(draft => {
-          draft.idx = parseInt(value, 10);
-        });
-      }}
-    />
-
-    <button
-      className="f7 mr2"
-      onClick={() =>
-        setHistory(draft => {
-          draft.idx = Math.min(draft.idx + 1, draft.stateHistory.length - 1);
-        })
-      }
-    >
-      {">>"}
-    </button>
+    <div className="ml2 w-100">
+      <Slider
+        disabled={isPlaying}
+        position={Math.max(0, historyIdx / stateHistory.length)}
+        onDrag={v =>
+          setHistory(draft => {
+            draft.idx = clamp(
+              Math.floor(v * stateHistory.length),
+              0,
+              stateHistory.length - 1
+            );
+          })
+        }
+      />
+    </div>
   </div>
 );
 
@@ -308,22 +371,22 @@ export const Sketch = ({ sketch, constants, setConstants, setHighlight }) => {
 
   return (
     <div className="w-100 h-100">
-      {/* <div className="mb2"> */}
-      {/*   <SketchControls */}
-      {/*     setHistory={setHistory} */}
-      {/*     historyIdx={historyIdx} */}
-      {/*     isPlaying={isPlaying} */}
-      {/*     setIsPlaying={setIsPlaying} */}
-      {/*     stateHistory={stateHistory} */}
-      {/*     onReset={() => */}
-      {/*       setHistory(draft => { */}
-      {/*         draft.stateHistory = [sketch.initialState || {}]; */}
-      {/*         draft.eventsHistory = [[]]; */}
-      {/*         draft.idx = 0; */}
-      {/*       }) */}
-      {/*     } */}
-      {/*   /> */}
-      {/* </div> */}
+      <div className="mb2">
+        <SketchControls
+          setHistory={setHistory}
+          historyIdx={historyIdx}
+          isPlaying={isPlaying}
+          setIsPlaying={setIsPlaying}
+          stateHistory={stateHistory}
+          onReset={() =>
+            setHistory(draft => {
+              draft.stateHistory = [sketch.initialState || {}];
+              draft.eventsHistory = [[]];
+              draft.idx = 0;
+            })
+          }
+        />
+      </div>
 
       <div className="h-100">
         <Panel direction={DIRECTION.VERTICAL} defaultDivide={0.8}>
