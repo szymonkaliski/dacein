@@ -187,7 +187,6 @@ export const replaceConstants = (code, constants) => {
   return recast.print(ast).code;
 };
 
-// TODO: return code and constants!
 export const pullOutConstants = code => {
   const ast = recast.parse(code);
 
@@ -232,6 +231,21 @@ export const pullOutConstants = code => {
         if (
           get(path, ["parentPath", "value", "object", "name"]) === "__constants"
         ) {
+          return false;
+        }
+
+        let searchPath = path;
+        let isInsideDraw = false;
+
+        while (searchPath) {
+          if (get(searchPath, ["value", "key", "name"]) === "draw") {
+            searchPath = null;
+            isInsideDraw = true;
+          }
+          searchPath = get(searchPath, "parentPath");
+        }
+
+        if (!isInsideDraw) {
           return false;
         }
 

@@ -4,8 +4,11 @@ import { ChromePicker } from "react-color";
 import { Controlled as CodeMirror } from "react-codemirror2";
 
 import "codemirror/lib/codemirror.css";
-import "./codemirror-base16-grayscale-dark.css";
 import "codemirror/mode/javascript/javascript";
+
+import "./codemirror-base16-grayscale-dark.css";
+import { Slider } from "./slider";
+import { scale } from "./math";
 
 const getColorFormat = str => {
   const RE_HSL = new RegExp(
@@ -49,25 +52,25 @@ const NumberPicker = ({ value, coords, onChange }) => {
   const [draftValue, setDraftValue] = useState(value);
 
   const exp = Math.round(Math.log10(Math.abs(value)));
-
   const min = 0;
   const max = Math.pow(10, exp + 1);
-  const step = exp <= 0 ? 1 / Math.pow(10, Math.abs(exp) + 2) : 1;
 
   return (
     <div
-      className="absolute pa1 bg-light-gray"
-      style={{ top: coords.top - 30, left: coords.left, zIndex: 10 }}
+      className="absolute"
+      style={{
+        top: coords.top > 30 ? coords.top - 12 : coords.top + 16,
+        left: coords.left - 10,
+        zIndex: 10,
+        width: 120
+      }}
     >
-      <input
-        type="range"
-        value={draftValue}
-        min={min}
-        max={max}
-        step={step}
-        onChange={e => {
-          setDraftValue(e.target.value);
-          onChange(`${e.target.value}`);
+      <Slider
+        position={scale(draftValue, min, max, 0, 1)}
+        onChange={value => {
+          const out = scale(value, 0, 1, min, max);
+          setDraftValue(out);
+          onChange(`${out}`);
         }}
       />
     </div>
@@ -81,8 +84,12 @@ const ColorPicker = ({ value, coords, onChange }) => {
 
   return (
     <div
-      className="absolute pa1 bg-light-gray"
-      style={{ top: coords.top - 260, left: coords.left, zIndex: 10 }}
+      className="absolute bg-light-gray br3"
+      style={{
+        top: coords.top > 300 ? coords.top - 250 : coords.top + 20,
+        left: coords.left - 40,
+        zIndex: 10
+      }}
     >
       <ChromePicker
         color={draftValue}
@@ -203,7 +210,7 @@ export const Editor = ({ code, highlight, onChange }) => {
             onChange={value => {
               const { start, line } = picker.text;
 
-              const newCode = code
+              const newCode = editorCode
                 .split("\n")
                 .map((codeLine, i) => {
                   if (i !== line) {

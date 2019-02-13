@@ -1,6 +1,5 @@
 import JSON from "react-json-view";
 import React, { useEffect, useState, useRef } from "react";
-import useComponentSize from "@rehooks/component-size";
 import { get } from "lodash";
 
 import { COMMANDS } from "./commands";
@@ -8,10 +7,10 @@ import { Panel, DIRECTION } from "./panel";
 import { makeInspector } from "./inspector";
 import { optimise } from "./optimise";
 import { useImmer } from "./hooks";
+import { Slider } from "./slider";
+import { clamp } from "./math";
 
 const MAX_HISTORY_LEN = 100;
-
-const clamp = (v, min, max) => Math.max(min, Math.min(v, max));
 
 const RoundButton = ({ onClick, children }) => (
   <div className="dib">
@@ -26,79 +25,6 @@ const RoundButton = ({ onClick, children }) => (
     </button>
   </div>
 );
-
-const Slider = ({ disabled, position, onDrag, height = 10 }) => {
-  const ref = useRef(null);
-  const size = useComponentSize(ref);
-  const [isDragging, setIsDragging] = useState(false);
-
-  const scale = (val, inputMin, inputMax, outputMin, outputMax) => {
-    return (
-      (outputMax - outputMin) * ((val - inputMin) / (inputMax - inputMin)) +
-      outputMin
-    );
-  };
-
-  useEffect(() => {
-    if (!ref) {
-      return;
-    }
-
-    if (disabled) {
-      return;
-    }
-
-    const bbox = ref.current.getBoundingClientRect();
-
-    const onMouseMove = e => {
-      e.preventDefault();
-
-      if (e.clientX === 0) {
-        return;
-      }
-
-      onDrag((e.clientX - bbox.left) / size.width);
-    };
-
-    const onMouseUp = () => {
-      window.removeEventListener("mousemove", onMouseMove);
-      window.removeEventListener("mouseup", onMouseUp);
-
-      setIsDragging(false);
-    };
-
-    if (isDragging !== false) {
-      window.addEventListener("mousemove", onMouseMove);
-      window.addEventListener("mouseup", onMouseUp);
-    }
-
-    return () => {
-      window.removeEventListener("mousemove", onMouseMove);
-      window.removeEventListener("mouseup", onMouseUp);
-    };
-  });
-
-  const left = scale(position, 0, 1, 1, size.width - 1 - height);
-
-  return (
-    <div ref={ref} className="w-100 bg-gray relative br3" style={{ height }}>
-      <div
-        className="bg-custom-dark br-pill absolute dim"
-        style={{
-          height: height - 2,
-          width: height - 2,
-          top: 1,
-          left: `${left}px`,
-          cursor: "ew-resize"
-        }}
-        onMouseDown={e => {
-          e.preventDefault();
-          setIsDragging(true);
-        }}
-      />
-    </div>
-  );
-};
 
 const SketchControls = ({
   isPlaying,
@@ -130,8 +56,12 @@ const SketchControls = ({
     <div className="ml2 w-100">
       <Slider
         disabled={isPlaying}
-        position={Math.max(0, historyIdx / stateHistory.length)}
-        onDrag={v =>
+        position={
+          stateHistory.length > 1
+            ? Math.max(0, historyIdx / (stateHistory.length - 1))
+            : 0
+        }
+        onChange={v =>
           setHistory(draft => {
             draft.idx = clamp(
               Math.floor(v * stateHistory.length),
@@ -152,7 +82,7 @@ export const Sketch = ({ sketch, constants, setConstants, setHighlight }) => {
     idx: 0
   });
 
-  const [isPlaying, setIsPlaying] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(true);
   const [isOptimising, setIsOptimising] = useState(false);
   const canvasRef = useRef(null);
 
@@ -292,7 +222,7 @@ export const Sketch = ({ sketch, constants, setConstants, setHighlight }) => {
 
     // TODO: make inspector into a const ref!
     const inspector = makeInspector({ sketch, globals, constants });
-    console.log("NEW INSPECTOR");
+    // console.log("NEW INSPECTOR");
 
     inspector.setState(state);
     inspector.draw();
@@ -371,42 +301,42 @@ export const Sketch = ({ sketch, constants, setConstants, setHighlight }) => {
 
   return (
     <div className="w-100 h-100">
-      <div className="mb2">
-        <SketchControls
-          setHistory={setHistory}
-          historyIdx={historyIdx}
-          isPlaying={isPlaying}
-          setIsPlaying={setIsPlaying}
-          stateHistory={stateHistory}
-          onReset={() =>
-            setHistory(draft => {
-              draft.stateHistory = [sketch.initialState || {}];
-              draft.eventsHistory = [[]];
-              draft.idx = 0;
-            })
-          }
-        />
-      </div>
-
-      <div className="h-100">
-        <Panel direction={DIRECTION.VERTICAL} defaultDivide={0.8}>
-          <div className="flex justify-center items-center relative h-100">
-            <canvas width={width} height={height} ref={canvasRef} />
-          </div>
-
-          <div className="pa2">
-            <JSON
-              src={stateHistory[historyIdx]}
-              name="state"
-              enableClipboard={false}
-              displayDataTypes={false}
-              displayObjectSize={false}
-              indentWidth={2}
-              theme="grayscale"
+      <Panel direction={DIRECTION.VERTICAL} defaultDivide={0.85}>
+        <div className="flex flex-column h-100">
+          <div className="mb2">
+            <SketchControls
+              setHistory={setHistory}
+              historyIdx={historyIdx}
+              isPlaying={isPlaying}
+              setIsPlaying={setIsPlaying}
+              stateHistory={stateHistory}
+              onReset={() =>
+                setHistory(draft => {
+                  draft.stateHistory = [sketch.initialState || {}];
+                  draft.eventsHistory = [[]];
+                  draft.idx = 0;
+                })
+              }
             />
           </div>
-        </Panel>
-      </div>
+
+          <div className="flex justify-center items-center relative h-100 overflow-hidden">
+            <canvas width={width} height={height} ref={canvasRef} />
+          </div>
+        </div>
+
+        <div className="pa2">
+          <JSON
+            src={stateHistory[historyIdx]}
+            name="state"
+            enableClipboard={false}
+            displayDataTypes={false}
+            displayObjectSize={false}
+            indentWidth={2}
+            theme="grayscale"
+          />
+        </div>
+      </Panel>
     </div>
   );
 };

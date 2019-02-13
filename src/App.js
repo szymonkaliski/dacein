@@ -3,7 +3,7 @@ import { require } from "d3-require";
 
 import { Editor } from "./editor";
 import { Errors } from "./errors";
-import { Panel } from "./panel";
+import { Panel, DIRECTION } from "./panel";
 import { Sketch } from "./sketch";
 import { Topbar } from "./topbar";
 
@@ -28,6 +28,7 @@ sketch({
 
   update: state => {
     state.c += 0.01;
+    state.r = Math.sin(state.c) * 200;
 
     return state;
   },
@@ -36,24 +37,19 @@ sketch({
     const n = 20;
 
     const points = _.range(n).map((_, i) => [
-      Math.sin(i / n * Math.PI * 2.0) * 200 + 300,
-      Math.cos(i / n * Math.PI * 2.0) * 200 + 300
+      Math.sin((i / n) * Math.PI * 2.0) * state.r + 300,
+      Math.cos((i / n) * Math.PI * 2.0) * state.r + 300
     ]);
 
     const r = 10;
 
     return [
-      [
-        "background",
-        { fill: "#481212" }
-      ],
-      ...points.map(p => [
-        "ellipse",
-        { pos: p, size: [r, r], fill: "#d09191" }
-      ]),
+      ["background", { fill: "#1d4862" }],
+      ...points.map(p => ["ellipse", { pos: p, size: [r, r], fill: "#5491a8" }])
     ];
   }
-});`;
+});
+`;
 
 export const App = () => {
   const [code, setCode] = useState(TEST_SKETCH);
@@ -71,7 +67,12 @@ export const App = () => {
       window.require = require;
       window.sketch = sketch => {
         try {
-          sketch.draw(sketch.initialState, pulledConstants);
+          if (sketch.update) {
+            sketch.update(sketch.initialState || {});
+          }
+          if (sketch.draw) {
+            sketch.draw(sketch.initialState || {}, pulledConstants || []);
+          }
         } catch (e) {
           console.warn(e);
           tmpErrors.push(e.description);
@@ -148,14 +149,20 @@ export const App = () => {
           )}
         </div>
 
-        <div>
-          <Editor
-            code={code}
-            onChange={e => setCode(e)}
-            highlight={highlight}
-          />
+        <div className="h-100">
+          <Panel direction={DIRECTION.VERTICAL} defaultDivide={0.85}>
+            <div>
+              <Editor
+                code={code}
+                onChange={e => setCode(e)}
+                highlight={highlight}
+              />
+            </div>
 
-          <Errors errors={errors} />
+            <div>
+              <Errors errors={errors} />
+            </div>
+          </Panel>
         </div>
       </Panel>
     </div>
