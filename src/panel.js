@@ -68,12 +68,12 @@ export const Panel = ({
   const styles =
     direction === DIRECTION.HORIZONTAL
       ? [
-          { width: size.width * divider - dividerSize / 2 },
-          { width: size.width * (1 - divider) - dividerSize / 2 }
+          { width: Math.round(size.width * divider - dividerSize / 2) },
+          { width: Math.round(size.width * (1 - divider) - dividerSize / 2) }
         ]
       : [
-          { height: size.height * divider - dividerSize / 2 },
-          { height: size.height * (1 - divider) - dividerSize / 2 }
+          { height: Math.round(size.height * divider - dividerSize / 2) },
+          { height: Math.round(size.height * (1 - divider) - dividerSize / 2) }
         ];
 
   const handleWrapperStyle =

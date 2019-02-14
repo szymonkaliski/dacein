@@ -34,18 +34,19 @@ sketch({
   },
 
   draw: state => {
-    const n = 20;
+    // const n = 20;
 
-    const points = _.range(n).map((_, i) => [
-      Math.sin((i / n) * Math.PI * 2.0) * state.r + 300,
-      Math.cos((i / n) * Math.PI * 2.0) * state.r + 300
-    ]);
+    // const points = _.range(n).map((_, i) => [
+    //   Math.sin((i / n) * Math.PI * 2.0) * state.r + 300,
+    //   Math.cos((i / n) * Math.PI * 2.0) * state.r + 300
+    // ]);
 
-    const r = 10;
+    // const r = 10;
 
     return [
       ["background", { fill: "#1d4862" }],
-      ...points.map(p => ["ellipse", { pos: p, size: [r, r], fill: "#5491a8" }])
+      ["rect", { fill: "#ffffff", pos: [10, 10], size: [20, 20] }],
+      // ...points.map(p => ["ellipse", { pos: p, size: [r, r], fill: "#5491a8" }])
     ];
   }
 });
@@ -65,11 +66,13 @@ export const App = () => {
       let finalCode = null;
 
       window.require = require;
+
       window.sketch = sketch => {
         try {
           if (sketch.update) {
             sketch.update(sketch.initialState || {});
           }
+
           if (sketch.draw) {
             sketch.draw(sketch.initialState || {}, pulledConstants || []);
           }
@@ -81,7 +84,12 @@ export const App = () => {
         if (tmpErrors.length > 0) {
           setErrors(tmpErrors);
         } else {
-          setSketch(sketch);
+          setSketch({
+            initialState: {},
+            update: () => {},
+            draw: () => [],
+            ...sketch
+          });
         }
       };
 

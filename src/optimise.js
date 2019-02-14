@@ -10,11 +10,13 @@ export const optimise = ({ constants, sketch, state, id, target }) => {
   try {
     minimised = uncmin(x => {
       const drawCalls = sketch.draw(state, x);
-      const [command, args] = drawCalls[id];
+      const [_, args] = drawCalls[id];
 
-      if (command === "ellipse") {
+      if (args.pos !== undefined) {
         return dist(args.pos, target);
       }
+
+      return 0;
     }, x0);
   } catch (e) {
     console.warn(e);

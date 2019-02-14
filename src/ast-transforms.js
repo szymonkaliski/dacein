@@ -160,16 +160,24 @@ export const replaceConstants = (code, constants) => {
   const ast = recast.parse(code);
 
   types.visit(ast, {
-    visitProperty: function(path) {
-      if (path.value.key.name === "draw") {
-        this.traverse(path);
-      } else {
-        return false;
-      }
-    },
-
     visitLiteral: function(path) {
       if (isNumber(path.value.value)) {
+        let searchPath = path;
+        let isInsideDraw = false;
+
+        while (searchPath) {
+          if (get(searchPath, ["value", "key", "name"]) === "draw") {
+            searchPath = null;
+            isInsideDraw = true;
+          }
+          searchPath = get(searchPath, "parentPath");
+        }
+
+        if (!isInsideDraw) {
+          this.traverse(path);
+          return;
+        }
+
         if (constants && constants[idx]) {
           const number = constants[idx];
 
@@ -194,14 +202,6 @@ export const pullOutConstants = code => {
   const pulledConstants = [];
 
   types.visit(ast, {
-    visitProperty: function(path) {
-      if (path.value.key.name === "draw") {
-        this.traverse(path);
-      } else {
-        return false;
-      }
-    },
-
     visitArrowFunctionExpression: function(path) {
       if (get(path, "parentPath.value.key.name") === "draw") {
         return Builders.arrowFunctionExpression(
@@ -246,7 +246,8 @@ export const pullOutConstants = code => {
         }
 
         if (!isInsideDraw) {
-          return false;
+          this.traverse(path);
+          return;
         }
 
         pulledConstants.push(path.value.value);

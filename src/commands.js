@@ -48,8 +48,8 @@ export const COMMANDS = {
       ctx.strokeStyle = stroke;
     }
 
-    const [x, y] = pos;
-    const [w, h] = size;
+    const [x, y] = pos || [0, 0];
+    const [w, h] = size || [0, 0];
 
     ctx.beginPath();
     ctx.ellipse(x, y, w, h, 0, 0, Math.PI * 2);
@@ -70,8 +70,8 @@ export const COMMANDS = {
       ctx.strokeStyle = stroke;
     }
 
-    const [x, y] = pos;
-    const [w, h] = size;
+    const [x, y] = pos || [0, 0];
+    const [w, h] = size || [0, 0];
 
     ctx.beginPath();
     ctx.rect(x, y, w, h);

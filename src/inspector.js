@@ -4,7 +4,7 @@ import { get } from "lodash";
 import { COMMANDS } from "./commands";
 
 const encodeInColor = num => {
-  const hex = num.toString(16);
+  const hex = num.toString(16).substr(0, 6);
   return `#${leftPad(hex, 6, "0")}`;
 };
 
@@ -14,6 +14,8 @@ const decodeFromColor = hex => {
 
 export const makeInspector = ({ sketch, globals, constants }) => {
   const canvas = document.createElement("canvas");
+
+  window.inspectorCanvas = canvas;
 
   canvas.width = globals.width;
   canvas.height = globals.height;
@@ -48,7 +50,9 @@ export const makeInspector = ({ sketch, globals, constants }) => {
 
   const onHover = (x, y) => {
     const data = ctx.getImageData(x, y, 1, 1).data.slice(0, 3);
-    const hex = data.map(n => n.toString(16)).join("");
+    const hex = Array.from(data)
+      .map(n => leftPad(n.toString(16), 2, "0"))
+      .join("");
     const id = decodeFromColor(hex);
 
     return id;
