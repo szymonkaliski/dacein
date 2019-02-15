@@ -45,7 +45,7 @@ sketch({
 
     return [
       ["background", { fill: "#1d4862" }],
-      ["rect", { fill: "#ffffff", pos: [10, 10], size: [20, 20] }],
+      ["rect", { fill: "#ffffff", pos: [10, 10], size: [80, 80] }],
       // ...points.map(p => ["ellipse", { pos: p, size: [r, r], fill: "#5491a8" }])
     ];
   }
