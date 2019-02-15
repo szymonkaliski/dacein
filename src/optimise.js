@@ -1,8 +1,7 @@
 import { uncmin } from "numeric";
 import { get } from "lodash";
 
-const dist = ([ax, ay], [bx, by]) => Math.hypot(bx - ax, by - ay);
-const add = ([ax, ay], [bx, by]) => [ax + bx, ay + by];
+import { add, dist } from "./math";
 
 export const optimise = ({ constants, sketch, state, id, target, delta }) => {
   const x0 = constants;

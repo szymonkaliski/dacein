@@ -16,51 +16,48 @@ export const Panel = ({
   const [isDragging, setIsDragging] = useState(false);
   const [divider, setDivider] = useState(defaultDivide);
 
-  useEffect(
-    () => {
-      if (!ref) {
-        return;
-      }
+  useEffect(() => {
+    if (!ref) {
+      return;
+    }
 
-      const bbox = ref.current.getBoundingClientRect();
+    const bbox = ref.current.getBoundingClientRect();
 
-      const onMouseMove = e => {
-        e.preventDefault();
+    const onMouseMove = e => {
+      e.preventDefault();
 
-        if (direction === DIRECTION.HORIZONTAL) {
-          if (e.clientX === 0) {
-            return;
-          }
-
-          setDivider((e.clientX - bbox.left) / size.width);
-        } else {
-          if (e.clientY === 0) {
-            return;
-          }
-
-          setDivider((e.clientY - bbox.top) / size.height);
+      if (direction === DIRECTION.HORIZONTAL) {
+        if (e.clientX === 0) {
+          return;
         }
-      };
 
-      const onMouseUp = () => {
-        window.removeEventListener("mousemove", onMouseMove);
-        window.removeEventListener("mouseup", onMouseUp);
+        setDivider((e.clientX - bbox.left) / size.width);
+      } else {
+        if (e.clientY === 0) {
+          return;
+        }
 
-        setIsDragging(false);
-      };
-
-      if (isDragging !== false) {
-        window.addEventListener("mousemove", onMouseMove);
-        window.addEventListener("mouseup", onMouseUp);
+        setDivider((e.clientY - bbox.top) / size.height);
       }
+    };
 
-      return () => {
-        window.removeEventListener("mousemove", onMouseMove);
-        window.removeEventListener("mouseup", onMouseUp);
-      };
-    },
-    [isDragging, direction, ref]
-  );
+    const onMouseUp = () => {
+      window.removeEventListener("mousemove", onMouseMove);
+      window.removeEventListener("mouseup", onMouseUp);
+
+      setIsDragging(false);
+    };
+
+    if (isDragging !== false) {
+      window.addEventListener("mousemove", onMouseMove);
+      window.addEventListener("mouseup", onMouseUp);
+    }
+
+    return () => {
+      window.removeEventListener("mousemove", onMouseMove);
+      window.removeEventListener("mouseup", onMouseUp);
+    };
+  }, [isDragging, direction, ref]);
 
   const dividerSize = 10;
   const handleSize = 1;

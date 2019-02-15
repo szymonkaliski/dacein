@@ -15,8 +15,6 @@ const decodeFromColor = hex => {
 export const makeInspector = ({ sketch, globals, constants }) => {
   const canvas = document.createElement("canvas");
 
-  window.inspectorCanvas = canvas;
-
   canvas.width = globals.width;
   canvas.height = globals.height;
 

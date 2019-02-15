@@ -4,6 +4,7 @@
   "private": true,
   "dependencies": {
     "@rehooks/component-size": "^1.0.2",
+    "@rehooks/window-size": "^1.0.2",
     "ast-types": "^0.12.2",
     "codemirror": "^5.43.0",
     "d3-require": "^1.2.2",

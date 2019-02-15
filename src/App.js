@@ -59,83 +59,80 @@ export const App = () => {
   const [errors, setErrors] = useState(null);
   const [highlight, setHighlight] = useState(null);
 
-  useEffect(
-    () => {
-      let tmpErrors = [];
-      let pulledConstants = null;
-      let finalCode = null;
+  useEffect(() => {
+    let tmpErrors = [];
+    let pulledConstants = null;
+    let finalCode = null;
 
-      window.require = require;
+    window.require = require;
 
-      window.sketch = sketch => {
-        try {
-          if (sketch.update) {
-            sketch.update(sketch.initialState || {});
-          }
-
-          if (sketch.draw) {
-            sketch.draw(sketch.initialState || {}, pulledConstants || []);
-          }
-        } catch (e) {
-          console.warn(e);
-          tmpErrors.push(e.description);
-        }
-
-        if (tmpErrors.length > 0) {
-          setErrors(tmpErrors);
-        } else {
-          setSketch({
-            initialState: {},
-            update: () => {},
-            draw: () => [],
-            ...sketch
-          });
-        }
-      };
-
-      // ast
+    window.sketch = sketch => {
       try {
-        const {
-          code: codeWithoutConstants,
-          constants: pulledOutConstants
-        } = pullOutConstants(code);
+        if (sketch.update) {
+          sketch.update(sketch.initialState || {});
+        }
 
-        const codeWithMeta = addMeta(codeWithoutConstants);
-        const codeWithRequires = processRequire(codeWithMeta);
-
-        pulledConstants = pulledOutConstants;
-        finalCode = codeWithRequires;
+        if (sketch.draw) {
+          sketch.draw(sketch.initialState || {}, pulledConstants || []);
+        }
       } catch (e) {
         console.warn(e);
         tmpErrors.push(e.description);
       }
 
-      if (pulledConstants) {
-        setConstants(pulledConstants);
+      if (tmpErrors.length > 0) {
+        setErrors(tmpErrors);
+      } else {
+        setSketch({
+          initialState: {},
+          update: () => {},
+          draw: () => [],
+          ...sketch
+        });
       }
+    };
 
-      // eval only if we have something worth evaling
-      if (finalCode) {
-        try {
-          eval(`
+    // ast
+    try {
+      const {
+        code: codeWithoutConstants,
+        constants: pulledOutConstants
+      } = pullOutConstants(code);
+
+      const codeWithMeta = addMeta(codeWithoutConstants);
+      const codeWithRequires = processRequire(codeWithMeta);
+
+      pulledConstants = pulledOutConstants;
+      finalCode = codeWithRequires;
+    } catch (e) {
+      console.warn(e);
+      tmpErrors.push(e.description);
+    }
+
+    if (pulledConstants) {
+      setConstants(pulledConstants);
+    }
+
+    // eval only if we have something worth evaling
+    if (finalCode) {
+      try {
+        eval(`
             const sketch = window.sketch;
             ${finalCode}
           `);
-        } catch (e) {
-          console.warn(e);
-          tmpErrors.push(e.description);
-        }
+      } catch (e) {
+        console.warn(e);
+        tmpErrors.push(e.description);
       }
+    }
 
-      setErrors(tmpErrors);
+    setErrors(tmpErrors);
 
-      return () => {
-        delete window.sketch;
-        delete window.require;
-      };
-    },
-    [code]
-  );
+    return () => {
+      delete window.sketch;
+      delete window.require;
+    };
+  }, [code]);
 
   return (
     <div className="code vh-100 bg-custom-dark near-white flex flex-column">

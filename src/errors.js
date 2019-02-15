@@ -7,7 +7,9 @@ export const Errors = ({ errors }) => {
       {!errors || (!errors.length && <div className="gray">no errors</div>)}
 
       {(errors || []).filter(identity).map(text => (
-        <div className="red" key={text}>{text}</div>
+        <div className="red" key={text}>
+          {text}
+        </div>
       ))}
     </div>
   );

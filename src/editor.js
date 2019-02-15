@@ -123,42 +123,36 @@ export const Editor = ({ code, highlight, onChange }) => {
   const highlightMarker = useRef(null);
 
   // FIXME
-  useEffect(
-    () => {
-      if (code !== editorCode) {
-        setEditorCode(code);
+  useEffect(() => {
+    if (code !== editorCode) {
+      setEditorCode(code);
+    }
+  }, [code]);
+
+  useEffect(() => {
+    if (!instance.current) {
+      return;
+    }
+
+    const clearMarker = () => {
+      if (highlightMarker.current) {
+        highlightMarker.current.clear();
+        highlightMarker.current = null;
       }
-    },
-    [code]
-  );
+    };
 
-  useEffect(
-    () => {
-      if (!instance.current) {
-        return;
-      }
+    clearMarker();
 
-      const clearMarker = () => {
-        if (highlightMarker.current) {
-          highlightMarker.current.clear();
-          highlightMarker.current = null;
-        }
-      };
+    if (highlight) {
+      highlightMarker.current = instance.current.markText(
+        { line: highlight.start },
+        { line: highlight.end },
+        { className: "inspector-highlight" }
+      );
+    }
 
-      clearMarker();
-
-      if (highlight) {
-        highlightMarker.current = instance.current.markText(
-          { line: highlight.start },
-          { line: highlight.end },
-          { className: "inspector-highlight" }
-        );
-      }
-
-      return clearMarker;
-    },
-    [instance, highlight]
-  );
+    return clearMarker;
+  }, [instance, highlight]);
 
   return (
     <div className="relative">
@@ -194,8 +188,6 @@ export const Editor = ({ code, highlight, onChange }) => {
           });
         }}
         options={{
-          autofocus: true,
-          lineNumbers: true,
           theme: "base16-grayscale-dark"
         }}
       />

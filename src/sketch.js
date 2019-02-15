@@ -1,6 +1,6 @@
 import JSON from "react-json-view";
 import React, { useEffect, useState, useRef } from "react";
-import { get } from "lodash";
+import { get, debounce } from "lodash";
 
 import { COMMANDS } from "./commands";
 import { Panel, DIRECTION } from "./panel";
@@ -276,36 +276,41 @@ export const Sketch = ({ sketch, constants, setConstants, setHighlight }) => {
 
     canvasRef.current.addEventListener("mousemove", onMouseMove);
     canvasRef.current.addEventListener("mousedown", onMouseDown);
-    canvasRef.current.addEventListener("mouseup", onMouseUp);
     canvasRef.current.addEventListener("mouseout", onMouseOut);
+
+    window.addEventListener("mouseup", onMouseUp);
 
     return () => {
       canvasRef.current.removeEventListener("mousemove", onMouseMove);
       canvasRef.current.removeEventListener("mousedown", onMouseDown);
-      canvasRef.current.removeEventListener("mouseup", onMouseUp);
       canvasRef.current.removeEventListener("mouseout", onMouseOut);
+
+      window.removeEventListener("mouseup", onMouseUp);
     };
   }, [isPlaying, isOptimising, sketch, canvasRef, historyIdx, stateHistory]);
 
-  useEffect(() => {
-    if (!isOptimising) {
-      return;
-    }
+  useEffect(
+    debounce(() => {
+      if (!isOptimising) {
+        return;
+      }
 
-    const state = stateHistory[historyIdx];
+      const state = stateHistory[historyIdx];
 
-    const newConstants = optimise({
-      ...isOptimising,
-      sketch,
-      state,
-      globals,
-      constants
-    });
+      const newConstants = optimise({
+        ...isOptimising,
+        sketch,
+        state,
+        globals,
+        constants
+      });
 
-    if (newConstants) {
-      setConstants(newConstants);
-    }
-  }, [isOptimising]);
+      if (newConstants) {
+        setConstants(newConstants);
+      }
+    }, 16),
+    [isOptimising]
+  );
 
   return (
     <div className="w-100 h-100">
