@@ -20,7 +20,7 @@ export const Overlay = ({ width, height, children, onClose }) => {
       />
 
       <div
-        className="overlfow-scroll absolute pa2 bg-custom-dark ba bg-gray"
+        className="overlfow-scroll absolute bg-custom-dark ba bg-gray"
         style={{
           top: (innerHeight - height) / 2,
           left: (innerWidth - width) / 2,

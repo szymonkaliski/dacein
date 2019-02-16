@@ -1,16 +1,10 @@
 import React, { useRef, useState } from "react";
 import { saveAs } from "file-saver";
 
-import { Overlay } from "./overlay";
-
-const Help = ({ onClose }) => (
-  <Overlay width={600} height={600} onClose={onClose}>
-    <div>TODO</div>
-  </Overlay>
-);
+import { Help } from "./help";
 
 export const Topbar = ({ setCode, code }) => {
-  const [isHelpVisible, setHelpVisible] = useState(false);
+  const [isHelpVisible, setHelpVisible] = useState(true);
   const fileRef = useRef(null);
 
   return (
