@@ -1,6 +1,6 @@
 import JSON from "react-json-view";
 import React, { useEffect, useState, useRef } from "react";
-import { get, debounce } from "lodash";
+import { get } from "lodash";
 
 import { COMMANDS } from "./commands";
 import { Panel, DIRECTION } from "./panel";
@@ -11,7 +11,7 @@ import { Slider } from "./slider";
 import { clamp } from "./math";
 
 const MAX_HISTORY_LEN = 1000;
-const DEFAULT_IS_PLAYING = false;
+const DEFAULT_IS_PLAYING = true;
 
 const RoundButton = ({ onClick, children }) => (
   <div className="dib">
@@ -289,28 +289,25 @@ export const Sketch = ({ sketch, constants, setConstants, setHighlight }) => {
     };
   }, [isPlaying, isOptimising, sketch, canvasRef, historyIdx, stateHistory]);
 
-  useEffect(
-    debounce(() => {
-      if (!isOptimising) {
-        return;
-      }
+  useEffect(() => {
+    if (!isOptimising) {
+      return;
+    }
 
-      const state = stateHistory[historyIdx];
+    const state = stateHistory[historyIdx];
 
-      const newConstants = optimise({
-        ...isOptimising,
-        sketch,
-        state,
-        globals,
-        constants
-      });
+    const newConstants = optimise({
+      ...isOptimising,
+      sketch,
+      state,
+      globals,
+      constants
+    });
 
-      if (newConstants) {
-        setConstants(newConstants);
-      }
-    }, 16),
-    [isOptimising]
-  );
+    if (newConstants) {
+      setConstants(newConstants);
+    }
+  }, [isOptimising]);
 
   return (
     <div className="w-100 h-100">

@@ -4,7 +4,7 @@ import { saveAs } from "file-saver";
 import { Help } from "./help";
 
 export const Topbar = ({ setCode, code }) => {
-  const [isHelpVisible, setHelpVisible] = useState(true);
+  const [isHelpVisible, setHelpVisible] = useState(false);
   const fileRef = useRef(null);
 
   return (
