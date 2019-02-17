@@ -1,6 +1,6 @@
 import JSON from "react-json-view";
 import React, { useEffect, useState, useRef } from "react";
-import { get } from "lodash";
+import { get, cloneDeep } from "lodash";
 
 import { COMMANDS } from "./commands";
 import { Panel, DIRECTION } from "./panel";
@@ -76,7 +76,13 @@ const SketchControls = ({
   </div>
 );
 
-export const Sketch = ({ sketch, constants, setConstants, setHighlight }) => {
+export const Sketch = ({
+  sketch,
+  code,
+  constants,
+  setConstants,
+  setHighlight
+}) => {
   const [{ stateHistory, idx: historyIdx }, setHistory] = useImmer({
     stateHistory: [sketch.initialState || {}],
     eventsHistory: [[]],
@@ -85,11 +91,20 @@ export const Sketch = ({ sketch, constants, setConstants, setHighlight }) => {
 
   const [isPlaying, setIsPlaying] = useState(DEFAULT_IS_PLAYING);
   const [isOptimising, setIsOptimising] = useState(false);
+  const [prevCode, setPrevCode] = useState(null);
+  const [isSingleStep, setSingleStep] = useState(false);
   const canvasRef = useRef(null);
 
   const [width, height] = get(sketch, "size", [800, 600]);
 
   const globals = { width, height };
+
+  useEffect(() => {
+    if (!isPlaying && code !== prevCode) {
+      setSingleStep(true);
+      setPrevCode(code);
+    }
+  }, [code, prevCode, isPlaying]);
 
   useEffect(() => {
     if (!canvasRef.current) {
@@ -148,59 +163,50 @@ export const Sketch = ({ sketch, constants, setConstants, setHighlight }) => {
 
     // play
 
-    let frameId = null;
-
     const ctx = canvasRef.current.getContext("2d");
 
-    const step = () => {
-      for (const operation of sketch.draw(
-        stateHistory[historyIdx],
-        constants
-      )) {
+    const draw = state => {
+      for (const operation of sketch.draw(state, constants)) {
         const [command, args] = operation;
 
         if (COMMANDS[command]) {
           COMMANDS[command](ctx, args, globals);
         }
       }
-
-      if (isPlaying) {
-        setHistory(
-          draft => {
-            const newState = sketch.update(
-              Object.assign(
-                {},
-                sketch.initialState,
-                draft.stateHistory[draft.idx]
-              ),
-              draft.eventsHistory[draft.idx],
-              globals
-            );
-
-            draft.stateHistory.push(newState);
-            draft.eventsHistory.push(events);
-
-            while (draft.stateHistory.length > MAX_HISTORY_LEN + 1) {
-              draft.stateHistory.shift();
-              draft.eventsHistory.shift();
-            }
-
-            draft.idx = Math.min(MAX_HISTORY_LEN, draft.idx + 1);
-          },
-          () => {
-            frameId = requestAnimationFrame(step);
-          }
-        );
-      }
     };
 
-    frameId = requestAnimationFrame(step);
+    if (isPlaying || isSingleStep) {
+      setHistory(draft => {
+        const state = sketch.update(
+          Object.assign(
+            {},
+            cloneDeep(sketch.initialState),
+            draft.stateHistory[draft.idx]
+          ),
+          draft.eventsHistory[draft.idx]
+        );
+
+        draft.stateHistory.push(state);
+        draft.eventsHistory.push(events);
+
+        while (draft.stateHistory.length > MAX_HISTORY_LEN + 1) {
+          draft.stateHistory.shift();
+          draft.eventsHistory.shift();
+        }
+
+        draft.idx = Math.min(MAX_HISTORY_LEN, draft.idx + 1);
+
+        draw(state);
+      });
+    } else {
+      draw(stateHistory[historyIdx]);
+    }
+
+    if (isSingleStep) {
+      setSingleStep(false);
+    }
 
     return () => {
-      if (frameId) {
-        cancelAnimationFrame(frameId);
-      }
-
       canvasRef.current.removeEventListener("mousemove", onMouseMove);
       canvasRef.current.removeEventListener("mousedown", onMouseDown);
       canvasRef.current.removeEventListener("mouseup", onMouseUp);
@@ -215,12 +221,11 @@ export const Sketch = ({ sketch, constants, setConstants, setHighlight }) => {
       return;
     }
 
-    if (isPlaying) {
+    if (isPlaying || isSingleStep) {
       return;
     }
 
     const state = stateHistory[historyIdx];
-
     const inspector = makeInspector({ sketch, globals, constants });
 
     inspector.setState(state);
@@ -287,7 +292,7 @@ export const Sketch = ({ sketch, constants, setConstants, setHighlight }) => {
 
       window.removeEventListener("mouseup", onMouseUp);
     };
-  }, [isPlaying, isOptimising, sketch, canvasRef, historyIdx, stateHistory]);
+  });
 
   useEffect(() => {
     if (!isOptimising) {
@@ -320,13 +325,15 @@ export const Sketch = ({ sketch, constants, setConstants, setHighlight }) => {
               isPlaying={isPlaying}
               setIsPlaying={setIsPlaying}
               stateHistory={stateHistory}
-              onReset={() =>
+              onReset={() => {
                 setHistory(draft => {
                   draft.stateHistory = [sketch.initialState || {}];
                   draft.eventsHistory = [[]];
                   draft.idx = 0;
-                })
-              }
+                });
+
+                setIsPlaying(false);
+              }}
             />
           </div>
 
@@ -335,7 +342,7 @@ export const Sketch = ({ sketch, constants, setConstants, setHighlight }) => {
           </div>
         </div>
 
-        <div className="pa2">
+        <div className="pa2 overflow-scroll h-100">
           <JSON
             src={stateHistory[historyIdx]}
             name="state"

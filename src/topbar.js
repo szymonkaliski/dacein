@@ -2,15 +2,18 @@ import React, { useRef, useState } from "react";
 import { saveAs } from "file-saver";
 
 import { Help } from "./help";
+import { EXAMPLES } from "./examples";
 
 export const Topbar = ({ setCode, code }) => {
   const [isHelpVisible, setHelpVisible] = useState(false);
+  const [isExamplesMenuVisible, setExamplesMenuVisible] = useState(false);
+
   const fileRef = useRef(null);
 
   return (
     <>
       <div className="bb b--gray flex f7" style={{ marginBottom: 5 }}>
-        <span className="bg-gray custom-dark pa2 dib mr3">dacein</span>
+        <span className="bg-gray custom-dark pv2 ph3 dib mr3">dacein</span>
 
         <div className="pa2">
           <span
@@ -26,7 +29,7 @@ export const Topbar = ({ setCode, code }) => {
             open
           </span>
           <span
-            className="dib mr3 pointer dim"
+            className="dib mr4 pointer dim"
             onClick={() => {
               saveAs(
                 new Blob([code], {
@@ -38,6 +41,38 @@ export const Topbar = ({ setCode, code }) => {
           >
             save
           </span>
+
+          <div className="dib mr3 relative">
+            <span
+              className="pointer dim"
+              onClick={() => setExamplesMenuVisible(!isExamplesMenuVisible)}
+            >
+              examples
+            </span>
+
+            {isExamplesMenuVisible && (
+              <div
+                className="absolute ba b--gray bg-custom-dark pa2 mt2"
+                style={{ zIndex: 10, left: -10, width: 160 }}
+              >
+                <ol className="list pa0 ma0">
+                  {Object.entries(EXAMPLES).map(([key, exampleCode]) => (
+                    <li
+                      className="pa1 dim pointer"
+                      key={key}
+                      onClick={() => {
+                        setCode(exampleCode);
+                        setExamplesMenuVisible(false);
+                      }}
+                    >
+                      {key}
+                    </li>
+                  ))}
+                </ol>
+              </div>
+            )}
+          </div>
+
           <span
             className="dib mr3 pointer dim"
             onClick={() => setHelpVisible(!isHelpVisible)}

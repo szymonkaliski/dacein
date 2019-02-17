@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { require } from "d3-require";
 
+import { EXAMPLES } from "./examples";
 import { Editor } from "./editor";
 import { Errors } from "./errors";
 import { Panel, DIRECTION } from "./panel";
@@ -17,43 +18,8 @@ import {
 import "tachyons";
 import "./style.css";
 
-const TEST_SKETCH = `const _ = require("lodash");
-
-sketch({
-  size: [600, 600],
-
-  initialState: {
-    c: 0
-  },
-
-  update: state => {
-    state.c += 0.01;
-    state.r = Math.sin(state.c) * 200;
-
-    return state;
-  },
-
-  draw: state => {
-    // const n = 20;
-
-    // const points = _.range(n).map((_, i) => [
-    //   Math.sin((i / n) * Math.PI * 2.0) * state.r + 300,
-    //   Math.cos((i / n) * Math.PI * 2.0) * state.r + 300
-    // ]);
-
-    // const r = 10;
-
-    return [
-      ["background", { fill: "#1d4862" }],
-      ["rect", { fill: "#ffffff", pos: [10, 10], size: [80, 80] }],
-      // ...points.map(p => ["ellipse", { pos: p, size: [r, r], fill: "#5491a8" }])
-    ];
-  }
-});
-`;
-
 export const App = () => {
-  const [code, setCode] = useState(TEST_SKETCH);
+  const [code, setCode] = useState(EXAMPLES["animated rectangle"]);
   const [constants, setConstants] = useState(null);
   const [sketch, setSketch] = useState(null);
   const [errors, setErrors] = useState(null);
@@ -145,6 +111,7 @@ export const App = () => {
           {sketch && (
             <Sketch
               sketch={sketch}
+              code={code}
               constants={constants}
               setConstants={newConstants =>
                 setCode(replaceConstants(code, newConstants))
