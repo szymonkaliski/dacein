@@ -35,7 +35,7 @@ export const App = () => {
     window.sketch = sketch => {
       try {
         if (sketch.update) {
-          sketch.update(sketch.initialState || {});
+          sketch.update(sketch.initialState || {}, []);
         }
 
         if (sketch.draw) {

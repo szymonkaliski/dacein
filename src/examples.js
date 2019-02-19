@@ -84,5 +84,43 @@ sketch({
       ])
     ]
   }
+});`,
+
+  events: `sketch({
+  size: [600, 600],
+
+  initialState: {
+    mousePos: [0, 0],
+    mouseClicked: false
+  },
+
+  update: (state, events) => {
+    events.forEach(event => {
+      if (event.source == "mousemove") {
+        state.mousePos = event.pos;
+      }
+
+      if (event.source == "mousedown") {
+        state.mouseClicked = true;
+      }
+
+      if (event.source == "mouseup") {
+        state.mouseClicked = false;
+      }
+    });
+
+    return state;
+  },
+
+  draw: state => {
+    return [
+      ["background", { fill: state.mouseClicked ? "#d2d2d2" : "#a2a2a2" }],
+      ["line", {
+        a: state.mousePos,
+        b: [300, 300]
+        stroke: "#050505"
+      }]
+    ];
+  }
 });`
 };

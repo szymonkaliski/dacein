@@ -54,7 +54,11 @@ export const Slider = ({
     };
   });
 
-  const left = scale(position, 0, 1, 2, size.width - 1 - height);
+  const left = clamp(
+    scale(position, 0, 1, 2, size.width - 1 - height),
+    2,
+    size.width - 1 - height
+  );
 
   return (
     <div
