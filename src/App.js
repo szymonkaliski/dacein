@@ -125,13 +125,11 @@ export const App = () => {
 
         <div className="h-100">
           <Panel direction={DIRECTION.VERTICAL} defaultDivide={0.85}>
-            <div>
-              <Editor
-                code={code}
-                onChange={e => setCode(e)}
-                highlight={highlight}
-              />
-            </div>
+            <Editor
+              code={code}
+              onChange={e => setCode(e)}
+              highlight={highlight}
+            />
 
             <div>
               <Errors errors={errors} />

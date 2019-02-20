@@ -155,7 +155,7 @@ export const Editor = ({ code, highlight, onChange }) => {
   }, [instance, highlight]);
 
   return (
-    <div className="relative">
+    <div className="relative h-100 overflow-scroll">
       <CodeMirror
         editorDidMount={e => (instance.current = e)}
         value={editorCode}
