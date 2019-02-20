@@ -167,6 +167,7 @@ export const Sketch = ({
             displayDataTypes={false}
             displayObjectSize={false}
             indentWidth={2}
+            collapsed={1}
             theme="grayscale"
           />
         </div>

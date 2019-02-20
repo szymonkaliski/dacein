@@ -1,6 +1,6 @@
 import React from "react";
 import immer from "immer";
-import { cloneDeep, xor, debounce, uniq } from "lodash";
+import { cloneDeep, xor, debounce } from "lodash";
 
 import { COMMANDS } from "./commands";
 import { makeInspector } from "./inspector";

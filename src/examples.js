@@ -122,5 +122,72 @@ sketch({
       }]
     ];
   }
+});`,
+
+  "particle system": `// adapted from https://p5js.org/examples/simulate-particle-system.htmlconst
+
+const vec2 = require("gl-vec2"); // require works
+
+const rand = (min, max) => Math.random() * (max - min) + min;
+
+const makeParticle = position => ({
+  acceleration: [0, 0.05],
+  position: position.slice(0),
+  velocity: [rand(-1, 1), rand(-1, 0)],
+  lifespan: 255
+});
+
+const updateParticle = particle => {
+  const velocity = vec2.create();
+  const position = vec2.create();
+
+  vec2.add(velocity, particle.velocity, particle.acceleration);
+  vec2.add(position, particle.position, velocity);
+
+  return {
+    lifespan: particle.lifespan - 2,
+    acceleration: particle.acceleration,
+    velocity,
+    position
+  };
+};
+
+const renderParticle = particle => [
+  "ellipse",
+  {
+    pos: particle.position,
+    size: [12, 12],
+    stroke: \`rgba(255, 255, 255, \${particle.lifespan})\`,
+    fill: \`rgba(127, 127, 127, \${particle.lifespan})\`
+  }
+];
+
+sketch({
+  size: [600, 600],
+
+  initialState: {
+    particles: []
+  },
+
+  update: state => {
+    state.particles.push(makeParticle([300, 50]));
+
+    for (let i = state.particles.length - 1; i >= 0; i--) {
+      state.particles[i] = updateParticle(state.particles[i]);
+
+      if (state.particles[i].lifespan < 0) {
+        state.particles.splice(i, 1);
+      }
+    }
+
+    return state;
+  },
+
+  draw: state => {
+    return [
+      ["background", { fill: "#333333" }],
+      ...state.particles.map(renderParticle)
+    ];
+  }
 });`
 };

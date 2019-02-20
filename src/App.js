@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { require } from "d3-require";
+import { requireFrom } from "d3-require";
 
 import { EXAMPLES } from "./examples";
 import { Editor } from "./editor";
@@ -30,7 +30,9 @@ export const App = () => {
     let pulledConstants = null;
     let finalCode = null;
 
-    window.require = require;
+    window.require = requireFrom(name =>
+      Promise.resolve(`https://bundle.run/${name}`)
+    );
 
     window.sketch = sketch => {
       try {

@@ -12,7 +12,7 @@ export const addMeta = code => {
 
   types.visit(ast, {
     visitExpressionStatement: function(path) {
-      if (path.value.expression.callee.name === "sketch") {
+      if (get(path, "value.expression.callee.name") === "sketch") {
         this.traverse(path);
       } else {
         return false;
