@@ -189,5 +189,99 @@ sketch({
       ...state.particles.map(renderParticle)
     ];
   }
-});`
+});`,
+
+  spring: `
+const clamp = (v, min, max) => Math.max(min, Math.min(v, max));
+
+const MIN_HEIGHT = 100;
+const MAX_HEIGHT = 200;
+
+const M = 0.8; // mass
+const K = 0.2; // spring constant
+const D = 0.92; // damping
+const R = 150; // rest position
+
+const updateSpring = spring => {
+  const f = -K * (spring.ps - R); // f=-ky
+  const as = f / M; // set the acceleration, f=ma == a=f/m
+  let vs = D * (spring.vs + as); // set the velocity
+  const ps = spring.ps + vs; // updated position
+
+  if (Math.abs(vs) < 0.1) {
+    vs = 0.0;
+  }
+
+  return Object.assign(spring, { f, as, vs, ps });
+};
+
+sketch({
+  size: [710, 400],
+
+  initialState: {
+    spring: {
+      left: 710 / 2 - 100,
+      width: 200,
+      height: 50,
+      ps: R, // position
+      vs: 0, // velocity
+      as: 0, // acceleration
+      f: 0 // force
+    },
+    mousePos: [0, 0],
+    isOver: false,
+    isDragging: false
+  },
+
+  update: (state, events) => {
+    if (!state.isDragging) {
+      state.spring = updateSpring(state.spring);
+    }
+
+    events.forEach(e => {
+      if (e.source === "mousemove") {
+        state.mousePos = e.pos;
+      }
+
+      if (e.source === "mousedown") {
+        state.isDragging = true;
+      }
+
+      if (e.source === "mouseup") {
+        state.isDragging = false;
+      }
+    });
+
+    if (
+      state.mousePos[0] > state.spring.left &&
+      state.mousePos[0] < state.spring.left + state.spring.width &&
+      state.mousePos[1] > state.spring.ps &&
+      state.mousePos[1] < state.spring.ps + state.spring.height
+    ) {
+      state.isOver = true;
+    } else {
+      state.isOver = false;
+    }
+
+    if (state.isDragging) {
+      state.spring.ps = state.mousePos[1] - state.spring.height / 2;
+      state.spring.ps = clamp(state.spring.ps, MIN_HEIGHT, MAX_HEIGHT);
+    }
+  },
+
+  draw: state => {
+    return [
+      ["background", { fill: "#656565" }],
+      [
+        "rect",
+        {
+          pos: [state.spring.left, state.spring.ps],
+          size: [state.spring.width, state.spring.height],
+          fill: state.isOver ? "#ffffff" : "#cccccc"
+        }
+      ]
+    ];
+  }
+});
+`
 };
