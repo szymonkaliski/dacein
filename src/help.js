@@ -8,7 +8,7 @@ const A = ({ href, children }) => (
   </a>
 );
 
-const LANG = [
+const LANG_HELP = [
   ["background", ["fill"]],
   ["line", ["a", "b", "stroke"]],
   ["path", ["points", "stroke", "fill"]],
@@ -16,7 +16,7 @@ const LANG = [
   ["rect", ["pos", "size", "fill", "stroke"]]
 ];
 
-const CODE = `sketch({
+const SAMPLE_CODE = `sketch({
   // sketch size
   size: [600, 600],
 
@@ -94,14 +94,14 @@ export const Help = ({ onClose }) => (
       </div>
 
       <div className="lh-copy f7 light-gray">
-        <pre className="gray">{CODE}</pre>
+        <pre className="gray">{SAMPLE_CODE}</pre>
       </div>
 
       <div className="measure-wide lh-copy f7 light-gray">
         <p>Commands available in the language:</p>
 
         <ol className="list pl3">
-          {LANG.map(([command, args]) => (
+          {LANG_HELP.map(([command, args]) => (
             <li key={command} style={{ listStyle: "disc" }}>
               <span className="gray">{command}</span> ({"{"}{" "}
               {args.map((arg, i) => (

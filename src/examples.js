@@ -1,8 +1,3 @@
-//                  <li className="pa1">brownian motion</li>
-//                  <li className="pa1">particle system</li>
-//                  <li className="pa1">spring</li>
-//                  <li className="pa1">chain</li>
-
 export const EXAMPLES = {
   "animated rectangle": `sketch({
   size: [600, 600],
