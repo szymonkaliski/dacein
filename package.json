@@ -1,7 +1,13 @@
 {
   "name": "dacein",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "private": true,
+  "homepage": "http://szymonkaliski.github.io/dacein",
+  "scripts": {
+    "start": "FORCE_COLOR=true BROWSER=none react-scripts start",
+    "build": "react-scripts build",
+    "deploy": "npm run build && gh-pages -d build"
+  },
   "dependencies": {
     "@rehooks/component-size": "^1.0.2",
     "@rehooks/window-size": "^1.0.2",
@@ -23,20 +29,17 @@
     "recast": "^0.17.3",
     "tachyons": "^4.11.1"
   },
-  "scripts": {
-    "start": "FORCE_COLOR=true BROWSER=none react-scripts start",
-    "build": "react-scripts build"
+  "devDependencies": {
+    "eslint-config-node-style-guide": "^3.0.0",
+    "eslint-config-prettier": "^4.0.0",
+    "eslint-plugin-prettier": "^3.0.1",
+    "eslint-plugin-react-hooks": "^1.0.2",
+    "gh-pages": "^2.0.1"
   },
   "browserslist": [
     ">0.2%",
     "not dead",
     "not ie <= 11",
     "not op_mini all"
-  ],
-  "devDependencies": {
-    "eslint-config-node-style-guide": "^3.0.0",
-    "eslint-config-prettier": "^4.0.0",
-    "eslint-plugin-prettier": "^3.0.1",
-    "eslint-plugin-react-hooks": "^1.0.2"
-  }
+  ]
 }
